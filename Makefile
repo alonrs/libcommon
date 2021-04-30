@@ -15,7 +15,7 @@ createmodule = $(shell $(CC) $(CFLAGS) -MM $(1)/*.c |               \
          } NR==1 || !/:/ {                                          \
              print $$0                                              \
          } END {                                                    \
-         	 printf "\t$$(CC) $$(CFLAGS) -c -o $$@ %s\n",           \
+             printf "\t$$(CC) $$(CFLAGS) -c -o $$@ %s\n",           \
                     "$$(patsubst $(BIN_DIR)/%.o,$(1)/%.c,$$@)"      \
          }' > $(BIN_DIR)/objects_$(2).mk)
 
