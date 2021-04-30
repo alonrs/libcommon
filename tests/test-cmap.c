@@ -15,7 +15,7 @@
 #define DEFAULT_READERS 3
 
 struct elem {
-    struct map_node node;
+    struct cmap_node node;
     uint32_t value;
 };
 
@@ -23,7 +23,7 @@ static size_t num_values;
 static uint32_t max_value;
 static uint32_t *values;
 static uint32_t hash_base;
-static struct map map_values;
+static struct cmap cmap_values;
 static volatile bool running;
 static volatile bool error;
 
@@ -31,14 +31,14 @@ static atomic_size_t checks;
 static volatile uint32_t inserts;
 static volatile uint32_t removes;
 
-/* Insert new value to map */
+/* Insert new value to cmap */
 static void
 insert_value(uint32_t value)
 {
     struct elem *elem;
     elem=(struct elem*)xmalloc(sizeof(*elem));
     elem->value = value;
-    map_insert(&map_values, &elem->node, hash_int(value, hash_base));
+    cmap_insert(&cmap_values, &elem->node, hash_int(value, hash_base));
 }
 
 /* Initiate all static variables */
@@ -54,7 +54,7 @@ initiate_values(uint32_t seed)
     max_value = (random_uint32() & 4096) + 2048;
     hash_base = random_uint32();
     values = (uint32_t*)xmalloc(sizeof(*values)*num_values);
-    map_init(&map_values);
+    cmap_init(&cmap_values);
     atomic_init(&checks, 0);
 
     for (int i=0; i<num_values; i++) {
@@ -67,38 +67,38 @@ initiate_values(uint32_t seed)
 static void
 destroy_values()
 {
-    struct map_state map_state;
+    struct cmap_state cmap_state;
     struct elem *elem;
     free(values);
 
-    map_state = map_state_acquire(&map_values);
-    MAP_FOR_EACH(elem, node, map_state) {
-        map_remove(&map_values, &elem->node);
+    cmap_state = cmap_state_acquire(&cmap_values);
+    MAP_FOR_EACH(elem, node, cmap_state) {
+        cmap_remove(&cmap_values, &elem->node);
         free(elem);
     }
-    map_state_release(map_state);
+    cmap_state_release(cmap_state);
     
-    map_destroy(&map_values);
+    cmap_destroy(&cmap_values);
 }
 
 
-/* Returns true iff "value" can be composed from two integers in "map" */
+/* Returns true iff "value" can be composed from two integers in "cmap" */
 static bool
 can_compose_value(uint32_t value)
 {
     struct elem *elem;
     uint32_t hash;
-    struct map_state map_state = map_state_acquire(&map_values);
+    struct cmap_state cmap_state = cmap_state_acquire(&cmap_values);
 
     hash = hash_int(value, hash_base);
-    MAP_FOR_EACH_WITH_HASH(elem, node, hash, map_state) {
+    MAP_FOR_EACH_WITH_HASH(elem, node, hash, cmap_state) {
         if (elem->value == value) {
-            map_state_release(map_state);
+            cmap_state_release(cmap_state);
             return true;
         }
     }
 
-    map_state_release(map_state);
+    cmap_state_release(cmap_state);
     return false;
 }
 
@@ -108,13 +108,13 @@ wait()
     usleep(1);
 }
 
-/* Constantly writes and removes values from map */
+/* Constantly writes and removes values from cmap */
 static void*
-update_map(void *args)
+update_cmap(void *args)
 {
     struct elem *elem;
     uint32_t hash;
-    struct map_state map_state;
+    struct cmap_state cmap_state;
     uint32_t value;
 
     while (running) {
@@ -126,24 +126,24 @@ update_map(void *args)
 
         /* Remove */
         hash = hash_int(random_uint32(), hash_base);
-        map_state = map_state_acquire(&map_values);
-        MAP_FOR_EACH_WITH_HASH(elem, node, hash, map_state) {
+        cmap_state = cmap_state_acquire(&cmap_values);
+        MAP_FOR_EACH_WITH_HASH(elem, node, hash, cmap_state) {
             if (elem->value > max_value) {
-                map_remove(&map_values, &elem->node);
+                cmap_remove(&cmap_values, &elem->node);
                 free(elem);
                 removes++;
                 break;
             }
         }
-        map_state_release(map_state);
+        cmap_state_release(cmap_state);
         wait();
     }
     return NULL;
 }
 
-/* Constantly check whever values in map can be composed */
+/* Constantly check whever values in cmap can be composed */
 static void*
-read_map(void *args)
+read_cmap(void *args)
 {
     uint32_t index;
 
@@ -173,7 +173,7 @@ int main(int argc, char **argv)
     /* Parse arguments */
     for (int i=0; i<argc; i++) {
         if (!strcmp("--help", argv[i]) || !strcmp("-h", argv[i])) {
-            printf("Tests performance and correctness of cmap.\n"
+            printf("Tests performance and correctness of ccmap.\n"
                    "Usage: %s [SECONDS] [READERS]\n"
                    "Defaults: %d seconds, %d reader threads.\n",
                    argv[0], DEFAULT_SECONDS, DEFAULT_READERS);
@@ -190,9 +190,9 @@ int main(int argc, char **argv)
 
     /* Start threads */
     for (int i=0; i<readers; ++i) {
-        pthread_create(&threads[i], NULL, read_map, NULL);
+        pthread_create(&threads[i], NULL, read_cmap, NULL);
     }
-    pthread_create(&threads[readers], NULL, update_map, NULL);
+    pthread_create(&threads[readers], NULL, update_cmap, NULL);
 
     /* Print stats to user */
     size_t dst = get_time_ns() + 1e9 * seconds;
@@ -200,10 +200,10 @@ int main(int argc, char **argv)
     while (get_time_ns() < dst) {
         current_checks = atomic_load(&checks);
         printf("#checks: %ld, #inserts: %u, #removes: %u, "
-               "map elements: %ld, utilization: %.2lf \n",
+               "cmap elements: %ld, utilization: %.2lf \n",
                current_checks, inserts, removes,
-               map_size(&map_values),
-               map_utilization(&map_values));
+               cmap_size(&cmap_values),
+               cmap_utilization(&cmap_values));
         usleep(250e3);
     }
 
