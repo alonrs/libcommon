@@ -7,7 +7,7 @@
 2. GNU gcc compiler compatible with C11.
 3. GNU make, awk, sed utilities.
 
-You can install all prerequisits use this command (in Ubuntu):
+You can install all prerequisits using this command (in Ubuntu):
 ```bash
 sudo apt-get install gcc gawk sed make
 ```
@@ -15,7 +15,7 @@ sudo apt-get install gcc gawk sed make
 # Using libcommon
 Insert this repo as a submodule to your git repository
 ```bash
-git submodule add https://github.com/alonrs/common.git libcommon
+git submodule add https://github.com/alonrs/libcommon.git
 ```
 Initialize the submodule using
 ```bash
