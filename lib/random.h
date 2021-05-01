@@ -21,6 +21,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 void random_init(void);
 void random_set_seed(uint32_t);
@@ -48,6 +49,13 @@ static inline uint16_t
 random_uint16(void)
 {
     return random_uint32();
+}
+
+/* Flips a coin, returns true with probability "prob" (in 0.0-1.0) */
+static inline bool
+random_coin(double prob)
+{
+    return random_double() <= prob;
 }
 
 #endif /* random.h */
