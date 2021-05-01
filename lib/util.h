@@ -172,6 +172,7 @@ typedef uint8_t CACHE_LINE_MARKER[1];
 #endif
 
 #define MAX(A, B) ((A) > (B) ? (A) : (B))
+#define MIN(A, B) ((A) < (B) ? (A) : (B))
 
 /* Returns X / Y, rounding up.  X must be nonnegative to round correctly. */
 #define DIV_ROUND_UP(X, Y) (((X) + ((Y) - 1)) / (Y))
@@ -187,6 +188,13 @@ typedef uint8_t CACHE_LINE_MARKER[1];
 
 /* Returns true if X is a power of 2, otherwise false. */
 #define IS_POW2(X) ((X) && !((X) & ((X) - 1)))
+
+/* Align to cache line */
+#define CACHE_ALIGNED __attribute__ ((aligned (64)))
+
+/* One cache line that acts as message accross cores. Access using NAME.val */
+#define MESSAGE_T(TYPE, NAME) volatile static union CACHE_ALIGNED \
+    { char _x[CACHE_LINE_SIZE]; TYPE val; } NAME
 
 /* Expands to an anonymous union that contains:
  *
@@ -257,7 +265,7 @@ typedef uint8_t CACHE_LINE_MARKER[1];
 #ifndef __cplusplus
 #define PADDED_MEMBERS_CACHELINE_MARKER(UNIT, CACHELINE, MEMBERS)   \
     union {                                                         \
-        CACHE_LINE_MARKER CACHELINE;                            \
+        CACHE_LINE_MARKER CACHELINE;                                \
         struct { MEMBERS };                                         \
         uint8_t PAD_ID[ROUND_UP(sizeof(struct { MEMBERS }), UNIT)]; \
     }
@@ -265,7 +273,7 @@ typedef uint8_t CACHE_LINE_MARKER[1];
 #define PADDED_MEMBERS_CACHELINE_MARKER(UNIT, CACHELINE, MEMBERS)           \
     struct struct_##CACHELINE { MEMBERS };                                  \
     union {                                                                 \
-        CACHE_LINE_MARKER CACHELINE;                                    \
+        CACHE_LINE_MARKER CACHELINE;                                        \
         struct { MEMBERS };                                                 \
         uint8_t PAD_ID[ROUND_UP(sizeof(struct struct_##CACHELINE), UNIT)];  \
     }
@@ -289,10 +297,6 @@ typedef uint8_t CACHE_LINE_MARKER[1];
 #define ALIGNED_STRUCT(N, TAG) __declspec(align(N)) struct TAG
 #define ALIGNED_VAR(N) __declspec(align(N))
 #endif
-
-/* GCC compare and swap for atomic operations */
-#define ATOMIC_CAS(PTR, OLDVAL, NEWVAL) \
-    __atomic_exchange(PTR, OLDVAL, NEWVAL, __ATOMIC_SEQ_CST)
 
 void abort_msg(const char *msg);
 

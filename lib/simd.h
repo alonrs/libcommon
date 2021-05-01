@@ -2,6 +2,7 @@
 #define _SIMD_H
 
 #include <stdio.h>
+#include "util.h"
 
 #ifdef __SSE__
  #include <x86intrin.h>
@@ -30,11 +31,6 @@
 # define EPU_REG __m128i
 # define SIMD_COMMAND(X) _mm ## X
 #endif
-
-/**
- * @brief Align to 64bytes
- */
-#define CACHE_ALIGNED __attribute__ ((aligned (64)))
 
 /**
  * @brief Used to pass information both float and integer vectors
