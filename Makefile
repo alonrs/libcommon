@@ -14,9 +14,7 @@ $(call createmodule,$(LIB_DIR),lib)
 $(call createmodule,$(TST_DIR),tst) 
 
 # Search for all objects, executables
-LIB_SRC:=$(wildcard $(LIB_DIR)/*.c)
 LIB_OBJ:=$(patsubst $(LIB_DIR)/%.c,$(BIN_DIR)/%.o,$(wildcard $(LIB_DIR)/*.c))
-TST_SRC:=$(wildcard $(TST_DIR)/*.c)
 TST_OBJ:=$(patsubst $(TST_DIR)/%.c,$(BIN_DIR)/%.o,$(wildcard $(TST_DIR)/*.c))
 TST_EXE:=$(patsubst $(TST_DIR)/%.c,$(BIN_DIR)/%.exe,$(wildcard $(TST_DIR)/*.c))
 
