@@ -5,11 +5,11 @@
 # Prerequisits
 1. A Linux operating system, or WSL for windows.
 2. GNU gcc compiler compatible with C11.
-3. GNU make, awk, sed utilities.
+3. GNU make, awk, sed, grep, cat utilities.
 
 You can install all prerequisits using this command (in Ubuntu):
 ```bash
-sudo apt-get install gcc gawk sed make
+sudo apt-get install gcc awk sed make grep
 ```
 
 # Using libcommon
