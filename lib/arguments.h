@@ -12,7 +12,7 @@
 /* Returns argument "NAME" from "ARGS" with default value "DEF" */
 #define ARG_INTEGER(ARGS, NAME, DEF)                   \
     arg_find(ARGS, NAME) == NULL ?                     \
-    DEF : atoi(arg_find(ARGS, NAME)->value)
+    DEF : atol(arg_find(ARGS, NAME)->value)
 #define ARG_DOUBLE(ARGS, NAME, DEF)                    \
     arg_find(ARGS, NAME) == NULL ?                     \
     DEF : atof(arg_find(ARGS, NAME)->value)
