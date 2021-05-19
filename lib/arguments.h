@@ -11,17 +11,17 @@
 
 /* Returns argument "NAME" from "ARGS" with default value "DEF" */
 #define ARG_INTEGER(ARGS, NAME, DEF)                   \
-    arg_find(ARGS, NAME) == NULL ?                     \
-    DEF : atol(arg_find(ARGS, NAME)->value)
+    (arg_find(ARGS, NAME) == NULL ?                    \
+     DEF : atol(arg_find(ARGS, NAME)->value))
 #define ARG_DOUBLE(ARGS, NAME, DEF)                    \
-    arg_find(ARGS, NAME) == NULL ?                     \
-    DEF : atof(arg_find(ARGS, NAME)->value)
+    (arg_find(ARGS, NAME) == NULL ?                    \
+     DEF : atof(arg_find(ARGS, NAME)->value))
 #define ARG_BOOL(ARGS, NAME, DEF)                      \
-    arg_find(ARGS, NAME) == NULL ?                     \
-    DEF : arg_find(ARGS, NAME)->available
+    (arg_find(ARGS, NAME) == NULL ?                    \
+     DEF : arg_find(ARGS, NAME)->available)
 #define ARG_STRING(ARGS, NAME, DEF)                    \
-    arg_find(ARGS, NAME) == NULL ?                     \
-    DEF : arg_find(ARGS, NAME)->value
+    (arg_find(ARGS, NAME) == NULL ?                    \
+     DEF : arg_find(ARGS, NAME)->value)
 
 const char* help_0 = "-h";
 const char* help_1 = "--help";
