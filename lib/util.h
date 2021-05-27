@@ -24,6 +24,10 @@
 #include <assert.h>
 #include "errno.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* To make NO_RETURN portable across gcc/clang and MSVC, it should be
  * added at the beginning of the function declaration. */
 #if __GNUC__ && !__CHECKER__
@@ -298,6 +302,7 @@ typedef uint8_t CACHE_LINE_MARKER[1];
 #define ALIGNED_VAR(N) __declspec(align(N))
 #endif
 
+
 void abort_msg(const char *msg);
 
 void *xmemdup(const void *, size_t);
@@ -310,5 +315,9 @@ uint32_t count_1bits(uint64_t x);
 
 /* qsort auxiliary: compare integers from highest to lowest */
 int int_compare_dec(void *a, void *b);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
