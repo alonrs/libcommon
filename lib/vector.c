@@ -178,11 +178,11 @@ vector_begin(struct vector *vector)
             .vector = vector,
             .chunk_index = 0,
             .elem_index = 0,
-            .chunk = list_is_empty(&vector->chunks) ?
-                     NULL : 
-                     CONTAINER_OF(list_front(&vector->chunks),
-                                  struct chunk,
-                                  node)
+            .chunk =  (!vector || list_is_empty(&vector->chunks)) ?
+                      NULL :
+                      CONTAINER_OF(list_front(&vector->chunks),
+                                   struct chunk,
+                                   node)
     };
     return it;
 }
@@ -206,6 +206,9 @@ vector_iterator_valid(struct vector_iterator *it)
 void
 vector_iterator_next(struct vector_iterator *it)
 {
+    if (!it->chunk) {
+        return;
+    }
     uint32_t num_elements = it->chunk->size / it->vector->elem_size;
     if (it->elem_index < num_elements-1) {
         it->elem_index++;
