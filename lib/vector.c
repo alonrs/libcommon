@@ -68,6 +68,9 @@ vector_init(int elem_size)
 void
 vector_destroy(struct vector *vector)
 {
+    if (!vector) {
+        return;
+    }
     struct chunk *chunk;
     LIST_FOR_EACH_POP(chunk, node, &vector->chunks) {
         free(chunk);
