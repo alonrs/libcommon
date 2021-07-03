@@ -125,6 +125,19 @@ typedef union {
 #endif
 
 /**
+ * @brief For clean code of set_epi32.
+ * @param ... Integers to put in the vector
+ */
+#ifdef NSIMD
+# define SIMD_SET_EPI32(a)  (int)a
+#elif __AVX__
+# define SIMD_SET_EPI32(a,b,c,d,e,f,g,h,...) \
+      _mm256_set_epi32(a,b,c,d,e,f,g,h)
+#elif __SSE__
+# define SIMD_SET_EPI32(a,b,c,d,...) _mm_set_epi32(a,b,c,d)
+#endif
+
+/**
  * @brief For clean code of zeros vector.
  */
 #ifdef NSIMD
@@ -589,6 +602,27 @@ simd_helper_castsi_ps__(unsigned int a)
 #elif __SSE__
 # define SIMD_REDUCE_MAX_EPU32(a, b)                    \
     __SIMD_REDUCE_MAX_128_TO_32_EPU32(a, b);
+#endif
+
+/**
+ * @brief For each "TARGET" unsigned integer within "VECTOR"
+ * @param VECTOR an integer vector
+ * @param TARGET destination variable to store results (previously declared)
+ */
+#ifdef NSIMD
+# define SIMD_FOREACH_EPU32 (VECTOR, TARGET)                                   \
+    for (TRAGET=VECTOR; TARGET==VECTOR; TARGET++)
+#elif __AVX__
+# define SIMD_FOREACH_EPU32(VECTOR, TARGET)                                    \
+    for(CACHE_ALIGNED unsigned buf[8], *cur=buf, valid=1; valid; valid=0)      \
+    for(_mm256_store_si256((__m256i *)buf, VECTOR), TARGET=*(unsigned*)cur;    \
+        cur<buf+8; cur++, TARGET=*(unsigned*)cur)
+#elif __SSE__
+# define SIMD_FOREACH_EPU32(VECTOR, TARGET)                                    \
+    for(TARGET=_mm_extract_epi32(VECTOR, 0), i=0; i<4;                         \
+    i++, TARGET=_mm_extract_epi32(VECTOR, i))
+#else
+# error("SIMD_FOR_EACH_EPU32 not implemented for target.")
 #endif
 
 /**
