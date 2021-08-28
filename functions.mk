@@ -14,6 +14,28 @@ createmodule = $(shell $(CC) $(CFLAGS) -MM $(1)/*.$(2) |               \
                     "$$(patsubst $(BIN_DIR)/%.o,$(1)/%.$(2),$$@)"      \
          }' > $(BIN_DIR)/objects_$(3).mk)
 
+
+# For each C file with path format $(1)/xxxx.c, create a path string 
+# with the format $(2)/xxxx.o. Filter out files with the basename prefix $(3)-
+# @param $1 Input directory
+# @param $2 Output directory
+# @param $3 File prefix to filter out (optional)
+collectobjects = $(filter-out $(2)/$(3)-%.o, \
+                       $(patsubst $(1)/%.c,  \
+                       $(2)/%.o,             \
+                       $(wildcard $(1)/*.c)))
+
+
+# For each C file with path format $(1)/$(3)xxxx.c, create a path string
+# with the format $(2)/$(3)xxxx.exe.
+# @param $1 Input directory
+# @param $2 Output directory
+# @param $3 File prefix (optional)
+collectexecutables = $(patsubst $(1)/$(3)%.c, \
+                       $(2)/$(3)%.exe,        \
+                       $(wildcard $(1)/$(3)*.c))
+
+
 # Check whether the CPU supports $(1); if so, add the flag $(2) to CFLAGS
 # @param $1 CPU extension to check for
 # @param $2 Flag to insert into CFLAGS
