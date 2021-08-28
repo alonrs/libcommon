@@ -25,6 +25,7 @@
 
 void random_init(void);
 void random_set_seed(uint32_t);
+uint32_t random_get_seed();
 
 void random_bytes(void *, size_t);
 uint32_t random_uint32(void);

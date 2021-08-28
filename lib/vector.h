@@ -40,7 +40,7 @@ void* vector_iterator_get(struct vector_iterator *it);
 #define VECTOR_FOR_EACH(VECTOR, VAR, TYPE)                                 \
     for(struct vector_iterator it = vector_begin(VECTOR);                  \
         vector_iterator_valid(&it) ? (VAR=*(TYPE*)vector_iterator_get(&it),\
-        true) : false; vector_iterator_next(&it))
+        1) : 0; vector_iterator_next(&it))
 
 
 #endif

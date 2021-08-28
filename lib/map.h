@@ -52,8 +52,8 @@ void map_next__(struct map *state, struct map_cursor *cursor);
 
 #define MAP_FOR_EACH__(NODE, MEMBER, MAP, START, STATE)                 \
     for(struct map_cursor cursor_ = START;                              \
-    (cursor_.node ? (INIT_CONTAINER(NODE, cursor_.node, MEMBER), true)  \
-                   : false); map_next__(STATE, &cursor_))
+    (cursor_.node ? (INIT_CONTAINER(NODE, cursor_.node, MEMBER), 1)     \
+                   : 0); map_next__(STATE, &cursor_))
 
 
 #endif

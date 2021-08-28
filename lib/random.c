@@ -31,6 +31,7 @@ random_init(void)
     while (!seed) {
         uint32_t t = (uint32_t)time(NULL);
         seed = t;
+        srand48(seed);
     }
 }
 
@@ -44,7 +45,17 @@ random_double(void)
 void
 random_set_seed(uint32_t seed_)
 {
+    while (!seed_) {
+        seed_ = (uint32_t)time(NULL);
+    }
     seed = seed_;
+    srand48(seed_);
+}
+
+uint32_t
+random_get_seed()
+{
+    return seed;
 }
 
 void
