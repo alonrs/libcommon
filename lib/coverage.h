@@ -13,12 +13,21 @@
 #ifdef COVERAGE
 #define COVERAGE_INC(NAME) \
     PERF_END(__coverage);  \
-    coverage_collect(__FILE__ ## ":" ## __func__ ## ":" NAME, __coverage);
+    coverage_collect(__FILE__, __func__, #NAME, __coverage);
 #else
 #define COVERAGE_INC(NAME)
 #endif
 
-void coverage_collect(const char *name, double time);
+#ifdef COVERAGE
+#define COVERAGE_PRINT coverage_print(stdout);
+#else
+#define COVERAGE_PRINT
+#endif
+
+void coverage_collect(const char *file,
+                      const char *function,
+                      const char *name,
+                      double time);
 void coverage_print(FILE *dst);
 double coverage_get_avg_time(const char *name);
 long coverage_get_counter(const char *name);

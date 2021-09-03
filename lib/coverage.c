@@ -12,7 +12,7 @@ static int coverage_init_flag = 0;
 static struct map map_coverage;
 
 struct coverage_node {
-    struct map_node *node;
+    struct map_node node;
     const char *name;
     uint64_t counter;
     double time;
@@ -35,7 +35,7 @@ coverage_node_new(const char *name)
     node = xmalloc(sizeof(*node));
     memset(node, 0, sizeof(*node));
     node->name = strdup(name);
-    map_insert(&map_coverage, node->node, hash);
+    map_insert(&map_coverage, &node->node, hash);
 
     return node;
 }
@@ -56,21 +56,36 @@ find_name(const char *name)
 }
 
 void
-coverage_collect(const char *name, double time)
+coverage_collect(const char *file,
+                 const char *function,
+                 const char *name,
+                 double time)
 {
     struct coverage_node *node;
+    size_t size;
+    char *buff;
 
     if (!coverage_init_flag) {
         coverage_init();
     }
 
-    node = find_name(name);
+    size = strlen(file) + strlen(function) + strlen(name) + 3;
+    buff = malloc(sizeof(char)*size);
+    memset(buff, 0, size);
+    strcat(buff, file);
+    strcat(buff, ":");
+    strcat(buff, function);
+    strcat(buff, ":");
+    strcat(buff, name);
+
+    node = find_name(buff);
     if (!node) {
-        node = coverage_node_new(name);
+        node = coverage_node_new(buff);
     }
 
     node->counter++;
     node->time += time;
+    free(buff);
 }
 
 double
@@ -99,9 +114,14 @@ void
 coverage_print(FILE *dst)
 {
     struct coverage_node *node;
+
+    if (!coverage_init_flag) {
+        coverage_init();
+    }
+
     MAP_FOR_EACH(node, node, &map_coverage) {
-        fprintf(dst, "%s: %lu hits, avg %.3f msec per hit\n",
-                node->name, node->counter, node->time / node->counter / 1e6);
+        fprintf(dst, "%s %lu hits, avg %.3f usec per hit\n",
+                node->name, node->counter, node->time / node->counter / 1e3);
     }
 }
 
