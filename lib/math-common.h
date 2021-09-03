@@ -9,6 +9,8 @@
 
 int compare_floats(const void *a, const void *b);
 int compare_integers(const void *a, const void *b);
+int compare_uint64(const void *a, const void *b);
+int compare_uint32(const void *a, const void *b);
 double normal_distribution(double mu, double sigma);
 
 

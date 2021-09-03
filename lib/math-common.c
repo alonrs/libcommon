@@ -8,13 +8,25 @@
 int
 compare_floats(const void *a, const void *b)
 {
-    return *(float*)a > *(float*)b;
+    return *(float*)a >= *(float*)b;
 }
 
 int
 compare_integers(const void *a, const void *b)
 {
-    return *(int*)a > *(int*)b;
+    return *(int*)a >= *(int*)b;
+}
+
+int
+compare_uint32(const void *a, const void *b)
+{
+    return *(uint32_t*)a >= *(uint32_t*)b;
+}
+
+int
+compare_uint64(const void *a, const void *b)
+{
+    return *(uint64_t*)a >= *(uint64_t*)b;
 }
 
 /* Randomizes numbers from the normal distribution N~(mu, sigma).
