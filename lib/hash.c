@@ -34,7 +34,7 @@ hash_bytes(const void *p_, size_t n, uint32_t basis)
 
     hash = basis;
     while (n >= 4) {
-        hash = hash_add(hash, (uint32_t)(uint64_t)p);
+        hash = hash_add(hash, (uint32_t)*(char*)p);
         n -= 4;
         p += 1;
     }
