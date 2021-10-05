@@ -6,6 +6,10 @@
 #include <unistd.h>
 #include "locks.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 enum {
     THREAD_SYNC_WAIT_WORKER = 0,
     THREAD_SYNC_WAIT_LEADER = 1,
@@ -107,5 +111,8 @@ thread_sync_continue(struct thread_sync *ts)
  * this */
 int thread_sync_full_barrier(struct thread_sync *ts);
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

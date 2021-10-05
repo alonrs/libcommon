@@ -26,6 +26,10 @@
 #include "util.h"
 #include "uuid.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 static inline uint32_t
 hash_rot(uint32_t x, int k)
 {
@@ -393,5 +397,9 @@ hash_uuid(struct uuid *uuid)
 {
     return hash_bytes(uuid, 4, 0);
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* hash.h */

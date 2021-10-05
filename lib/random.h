@@ -23,6 +23,10 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void random_init(void);
 void random_set_seed(uint32_t);
 uint32_t random_get_seed();
@@ -58,5 +62,9 @@ random_coin(double prob)
 {
     return random_double() <= prob;
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* random.h */

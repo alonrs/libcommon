@@ -7,6 +7,10 @@
 #include "locks.h"
 #include "list.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* Callback method for RCU type */
 typedef void(*rcu_callback_t)(void*);
 
@@ -47,5 +51,9 @@ void rcu_postpone__(struct rcu*,
                     rcu_callback_t,
                     void *args,
                     const char *where);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

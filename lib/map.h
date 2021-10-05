@@ -6,6 +6,10 @@
 #include <stdbool.h>
 #include "util.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* Simple hash-table. Thread unsafe. */
 
 struct map_node {
@@ -55,5 +59,8 @@ void map_next__(struct map *state, struct map_cursor *cursor);
     (cursor_.node ? (INIT_CONTAINER(NODE, cursor_.node, MEMBER), 1)     \
                    : 0); map_next__(STATE, &cursor_))
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

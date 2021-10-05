@@ -28,8 +28,16 @@ struct arguments {
     int available;
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* Prototypes */
 void arg_parse(int argc, char **argv, struct arguments*);
 struct arguments* arg_find(struct arguments*, const char*);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

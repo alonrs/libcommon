@@ -4,6 +4,10 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct vector;
 struct chunk;
 
@@ -42,5 +46,8 @@ void* vector_iterator_get(struct vector_iterator *it);
         vector_iterator_valid(&it) ? (VAR=*(TYPE*)vector_iterator_get(&it),\
         1) : 0; vector_iterator_next(&it))
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -7,6 +7,11 @@
 #include "util.h"
 #include "rcu.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 /* Concurrent cmap. Supports several concurrent readers, and a single concurrent
  * writer. To iterate, the user need to acuire a "cmap state" (snapshop). */
 
@@ -80,5 +85,8 @@ void cmap_next__(struct cmap_state state, struct cmap_cursor *cursor);
     (cursor_.node ? (INIT_CONTAINER(NODE, cursor_.node, MEMBER), true)  \
                    : false); cmap_next__(STATE, &cursor_))
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

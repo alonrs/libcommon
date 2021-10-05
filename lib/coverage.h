@@ -24,6 +24,10 @@
 #define COVERAGE_PRINT
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void coverage_collect(const char *file,
                       const char *function,
                       const char *name,
@@ -31,5 +35,9 @@ void coverage_collect(const char *file,
 void coverage_print(FILE *dst);
 double coverage_get_avg_time(const char *name);
 long coverage_get_counter(const char *name);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
