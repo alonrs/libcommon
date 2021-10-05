@@ -199,10 +199,10 @@ int main(int argc, char **argv)
     size_t current_checks;
     while (get_time_ns() < dst) {
         current_checks = atomic_load(&checks);
-        printf("#checks: %ld, #inserts: %u, #removes: %u, "
-               "cmap elements: %ld, utilization: %.2lf \n",
-               current_checks, inserts, removes,
-               cmap_size(&cmap_values),
+        printf("#checks: %u, #inserts: %u, #removes: %u, "
+               "cmap elements: %u, utilization: %.2lf \n",
+               (uint32_t)current_checks, inserts, removes,
+               (uint32_t)cmap_size(&cmap_values),
                cmap_utilization(&cmap_values));
         usleep(250e3);
     }
