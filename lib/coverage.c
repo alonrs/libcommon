@@ -120,8 +120,9 @@ coverage_print(FILE *dst)
     }
 
     MAP_FOR_EACH(node, node, &map_coverage) {
-        fprintf(dst, "%s %lu hits, avg %.3f usec per hit\n",
-                node->name, node->counter, node->time / node->counter / 1e3);
+        fprintf(dst, "%s %u hits, avg %.3f usec per hit\n",
+                node->name, (uint32_t)node->counter,
+                node->time / node->counter / 1e3);
     }
 }
 
