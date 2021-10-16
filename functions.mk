@@ -19,21 +19,23 @@ createmodule = $(shell $(CC) $(CFLAGS) -MM $(1)/*.$(2) |               \
 # with the format $(2)/xxxx.o. Filter out files with the basename prefix $(3)-
 # @param $1 Input directory
 # @param $2 Output directory
-# @param $3 File prefix to filter out (optional)
-collectobjects = $(filter-out $(2)/$(3)-%.o, \
-                       $(patsubst $(1)/%.c,  \
-                       $(2)/%.o,             \
-                       $(wildcard $(1)/*.c)))
+# @param $3 Extension of source files
+# @param $4 File prefix to filter out (optional)
+collectobjects = $(filter-out $(2)/$(4)-%.o,     \
+                       $(patsubst $(1)/%.$(3),   \
+                       $(2)/%.o,                 \
+                       $(wildcard $(1)/*.$(3))))
 
 
 # For each C file with path format $(1)/$(3)xxxx.c, create a path string
 # with the format $(2)/$(3)xxxx.exe.
 # @param $1 Input directory
 # @param $2 Output directory
-# @param $3 File prefix (optional)
-collectexecutables = $(patsubst $(1)/$(3)%.c, \
-                       $(2)/$(3)%.exe,        \
-                       $(wildcard $(1)/$(3)*.c))
+# @param $3 Extension of source files
+# @param $4 File prefix (optional)
+collectexecutables = $(patsubst $(1)/$(4)%.$(3),   \
+                       $(2)/$(4)%.exe,             \
+                       $(wildcard $(1)/$(4)*.$(3)))
 
 
 # Check whether the CPU supports $(1); if so, add the flag $(2) to CFLAGS
