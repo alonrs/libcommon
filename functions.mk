@@ -42,18 +42,20 @@ collectexecutables = $(patsubst $(1)/$(4)%.$(3),   \
                        $(wildcard $(1)/$(4)*.$(3)))
 
 
-# Check whether the CPU supports $(1); if so, add the flag $(2) to CFLAGS
+# Check whether the CPU supports $(1); if so, add the flag $(2) to AUTOFLAGS
 # @param $1 CPU extension to check for
-# @param $2 Flag to insert into CFLAGS
+# @param $2 Flag to insert into AUTOFLAGS
 cpucheck = $(shell cat /proc/cpuinfo | grep " $(1) " | awk  \
-    "END{if (NR>1) print \"CFLAGS+=$(2)\";}"                \
+    "END{if (NR>1) print \"AUTOFLAGS+=$(2)\";}"             \
     >> $(BIN_DIR)/config.mk)
 
-# Create bin directory, configure common flags
+# Create bin directory, configure AUTOFLAGS (if empty!)
 ifeq "$(wildcard $(BIN_DIR) )" ""
     $(shell mkdir $(BIN_DIR))
+ifeq "$(AUTOFLAGS)" ""
     $(call cpucheck,avx,"-mavx")
     $(call cpucheck,avx2,"-mavx2")
     $(call cpucheck,fma,"-mfma")
     $(call cpucheck,popcnt,"-mpopcnt")
+endif
 endif

@@ -28,12 +28,14 @@ function shell_createmodule() {
                awk -v compiler="$compiler_text" -v flags="$flags_text" \
                    -v file="$file" '
                    NR>1 && /:/ {
-                       printf "\t%s %s -o $@ -c $<\n", compiler, flags;
+                       printf "\t%s %s $(AUTOFLAGS) -o $@ -c $<\n",
+                       compiler, flags;
                        print $0
                    } NR==1 || !/:/ {
                        print $0
                    } END {
-                       printf "\t%s %s -o $@ -c $<\n", compiler, flags
+                       printf "\t%s %s $(AUTOFLAGS) -o $@ -c $<\n",
+                       compiler, flags;
                    }')
         raw+="\n"
     done
