@@ -13,11 +13,13 @@ shell_funcs :=$(current_dir)shell-functions.sh
 createmodule_c  =$(shell source $(shell_funcs) && \
                    echo "$(1)" | \
                    shell_createmodule "CC" "CFLAGS" \
-				                      "$(2)" "$(CC)" "$(CFLAGS)")
+				                      "$(2)" "$(BIN_DIR)" \
+                                      "$(CC)" "$(CFLAGS)")
 createmodule_cpp=$(shell source $(shell_funcs) && \
                    echo "$(1)" | \
-                   shell_createmodule "CXX" "CXXFLAGS"\
-				                      $(2) "$(CXX)" "$(CXXFLAGS)")
+                   shell_createmodule "CXX" "CXXFLAGS" \
+				                      "$(2)" "$(BIN_DIR)" \
+                                      "$(CXX)" "$(CXXFLAGS)")
 
 # For each C file with path format $(1)/xxxx.c, create a path string 
 # with the format $(2)/xxxx.o. Filter out files with the basename prefix $(3)-
