@@ -10,8 +10,8 @@ LDFLAGS  := -lpthread -lm
 include ./functions.mk
 
 # Create rules for all object files
-$(call createmodule,$(LIB_DIR),c,lib)
-$(call createmodule,$(TST_DIR),c,tst) 
+$(call createmodule_c,$(wildcard $(LIB_DIR)/*.c),lib)
+$(call createmodule_c,$(wildcard $(TST_DIR)/*.c),tst) 
 
 # Search for all objects, executables
 LIB_OBJ:=$(patsubst $(LIB_DIR)/%.c,$(BIN_DIR)/%.o,$(wildcard $(LIB_DIR)/*.c))
