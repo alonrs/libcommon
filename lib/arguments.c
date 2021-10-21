@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "arguments.h"
 
@@ -32,31 +33,42 @@ print_next_word(const char *str, int *cursor, int indent)
     char buffer[64];
     static int n = 0;
     int i;
+    int was_newline;
 
     memset(buffer, 0, 64);
     i = 0;
+    was_newline = 0;
 
     /* Get next word */
-    while ((str[n] != '\0') && (str[n] != ' ')) {
+    while ((str[n] != '\0') && !isspace(str[n])) {
         buffer[i] = str[n];
         ++n;
         ++i;
-    }
-
-    /* Skip whitespace */
-    while ((str[n] == ' ')) {
-        ++n;
     }
 
     *cursor += i;
 
     printf("%s ", buffer);
     if (*cursor >= MAX_LINE_WIDTH) {
+        was_newline = 1;
         printf("\n");
         for (int i=0; i<indent; ++i) {
             printf(" ");
         }
         *cursor=indent;
+    }
+
+    /* Skip whitespace */
+    while (isspace(str[n])) {
+        /* Print newline with indentation in case of a new line */
+        if (!was_newline && (str[n] == '\n')) {
+            printf("\n");
+            for (int i=0; i<indent; ++i) {
+                printf(" ");
+            }
+            *cursor=indent;
+        }
+        ++n;
     }
 
     if (str[n] != '\0') {

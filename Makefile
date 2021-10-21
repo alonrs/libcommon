@@ -25,6 +25,7 @@ $(BIN_DIR)/%.exe: $(BIN_DIR)/%.o $(BIN_DIR)/libcommon.a
 	$(CLINK) $(CFLAGS) $+ -o $@ $(LDFLAGS)
 
 $(BIN_DIR)/libcommon.a: $(LIB_OBJ)
+	rm -f $@
 	$(AR) -cq $@ $+
 
 # Include submodule with rules to create objects
