@@ -177,7 +177,7 @@ arg_parse(int argc, char **argv, struct arguments *required_args)
     if (current_arg->help != NULL) {
         printf("%s\n", current_arg->help);
     }
-    printf("MIT License, see LICENSE.MD file for more details.\n");
+    printf("See LICENSE.MD file for license details.\n");
 
     printf("Usage %s ", argv[0]);
 
