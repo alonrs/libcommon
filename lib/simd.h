@@ -153,8 +153,10 @@ typedef union {
  */
 #ifdef NSIMD
 # define SIMD_SUB_PS(a,b) a-b
+# define SIMD_SUB_SI(a,b) a-b
 #else
 # define SIMD_SUB_PS(a,b) SIMD_COMMAND(_sub_ps(a, b))
+# define SIMD_SUB_SI(a,b) SIMD_COMMAND(_sub_epi32(a, b))
 #endif
 
 /**
@@ -164,8 +166,10 @@ typedef union {
  */
 #ifdef NSIMD
 # define SIMD_ADD_PS(a,b) a+b
+# define SIMD_ADD_SI(a,b) a+b
 #else
 # define SIMD_ADD_PS(a,b) SIMD_COMMAND(_add_ps(a, b))
+# define SIMD_ADD_SI(a,b) SIMD_COMMAND(_add_epi32(a, b))
 #endif
 
 /**
@@ -238,12 +242,18 @@ simd_helper_and_ps__(float a, float b)
 #ifdef NSIMD
 # define SIMD_MAX_EPU32(a,b,c) a=(b>c) ? b : c
 # define SIMD_MIN_EPU32(a,b,c) a=(b>c) ? c : b
+# define SIMD_MAX_EPI32(a,b,c) a=(b>c) ? b : c
+# define SIMD_MIN_EPI32(a,b,c) a=(b>c) ? c : b
 #elif __AVX512F__
 # define SIMD_MAX_EPU32(a,b,c) a=_mm512_max_epu32(b,c)
 # define SIMD_MIN_EPU32(a,b,c) a=_mm512_min_epu32(b,c)
+# define SIMD_MAX_EPI32(a,b,c) a=_mm512_max_epi32(b,c)
+# define SIMD_MIN_EPI32(a,b,c) a=_mm512_min_epi32(b,c)
 #elif __AVX2__
 # define SIMD_MAX_EPU32(a,b,c) a=_mm256_max_epu32(b,c)
 # define SIMD_MIN_EPU32(a,b,c) a=_mm256_min_epu32(b,c)
+# define SIMD_MAX_EPI32(a,b,c) a=_mm256_max_epi32(b,c)
+# define SIMD_MIN_EPI32(a,b,c) a=_mm256_min_epi32(b,c)
 #elif __AVX__
 # define SIMD_MAX_EPU32(a,b,c)                                               \
     {                                                                        \
@@ -273,8 +283,39 @@ simd_helper_and_ps__(float a, float b)
     __m256  result_ps = _mm256_insertf128_ps(high_res_wide_ps,low_res_ps,1); \
     a=_mm256_castps_si256(result_ps);                                        \
     }
+# define SIMD_MAX_EPI32(a,b,c)                                               \
+    {                                                                        \
+    __m128i b_low = _mm256_extractf128_si256(b, 1);                          \
+    __m128i b_high = _mm256_castsi256_si128(b);                              \
+    __m128i c_low = _mm256_extractf128_si256(c, 1);                          \
+    __m128i c_high = _mm256_castsi256_si128(c);                              \
+    __m128i low_res = _mm_max_epi32(b_low, c_low);                           \
+    __m128i high_res = _mm_max_epi32(b_high, c_high);                        \
+    __m128  low_res_ps = _mm_castsi128_ps(low_res);                          \
+    __m128  high_res_ps =_mm_castsi128_ps(high_res);                         \
+    __m256  high_res_wide_ps = _mm256_castps128_ps256(high_res_ps);          \
+    __m256  result_ps = _mm256_insertf128_ps(high_res_wide_ps,low_res_ps,1); \
+    a=_mm256_castps_si256(result_ps);                                        \
+    }
+# define SIMD_MIN_EPI32(a,b,c)                                               \
+    {                                                                        \
+    __m128i b_low = _mm256_extractf128_si256(b, 1);                          \
+    __m128i b_high = _mm256_castsi256_si128(b);                              \
+    __m128i c_low = _mm256_extractf128_si256(c, 1);                          \
+    __m128i c_high = _mm256_castsi256_si128(c);                              \
+    __m128i low_res = _mm_min_epi32(b_low, c_low);                           \
+    __m128i high_res = _mm_min_epi32(b_high, c_high);                        \
+    __m128  low_res_ps = _mm_castsi128_ps(low_res);                          \
+    __m128  high_res_ps =_mm_castsi128_ps(high_res);                         \
+    __m256  high_res_wide_ps = _mm256_castps128_ps256(high_res_ps);          \
+    __m256  result_ps = _mm256_insertf128_ps(high_res_wide_ps,low_res_ps,1); \
+    a=_mm256_castps_si256(result_ps);                                        \
+    }
 #elif __SSE__
-# define SIMD_MAX_EPU32(a,b,c) a=_mm_min_epu32(b,c)
+# define SIMD_MAX_EPU32(a,b,c) a=_mm_max_epu32(b,c)
+# define SIMD_MIN_EPU32(a,b,c) a=_mm_min_epu32(b,c)
+# define SIMD_MAX_EPI32(a,b,c) a=_mm_max_epi32(b,c)
+# define SIMD_MIN_EPI32(a,b,c) a=_mm_min_epi32(b,c)
 #endif
 
 /**
@@ -577,8 +618,8 @@ simd_helper_castsi_ps__(unsigned int a)
     }
 
 /**
- * @brief Reduces MAX of all floats in vector register into a single float
- * @param a output of 32bit float
+ * @brief Reduces MAX of all integer in vector register into a single float
+ * @param a output of 32bit integer
  * @param b input register vector
  */
 #ifdef NSIMD
