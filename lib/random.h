@@ -16,8 +16,8 @@
  * Modified by Alon Rashelbach, Jan 2021
  */
 
-#ifndef _RANDOM_H
-#define _RANDOM_H
+#ifndef _COMMON_RANDOM_H
+#define _COMMON_RANDOM_H
 
 #include <stddef.h>
 #include <stdint.h>
