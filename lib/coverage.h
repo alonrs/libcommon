@@ -5,15 +5,15 @@
 #include "perf.h"
 
 #ifdef COVERAGE
-#define COVERAGE_MEASURE PERF_START(__coverage)
+#define COVERAGE_MEASURE(NAME) PERF_START(__coverage_##NAME)
 #else
-#define COVERAGE_MEASURE
+#define COVERAGE_MEASURE(NAME)
 #endif
 
 #ifdef COVERAGE
 #define COVERAGE_INC(NAME) \
-    PERF_END(__coverage);  \
-    coverage_collect(__FILE__, __func__, #NAME, __coverage);
+    PERF_END(__coverage_##NAME);  \
+    coverage_collect(__FILE__, __func__, #NAME, __coverage_##NAME);
 #else
 #define COVERAGE_INC(NAME)
 #endif
