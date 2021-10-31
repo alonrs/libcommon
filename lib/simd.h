@@ -213,6 +213,19 @@ simd_helper_and_ps__(float a, float b)
 # define SIMD_AND_PS(a,b) SIMD_COMMAND(_and_ps(a, b))
 #endif
 
+ /**
+  * @brief For clean code of and.
+  * @param a vector register
+  * @param b vector register
+  */
+#ifdef NSIMD
+# define SIMD_AND_SI(a,b) (a&b)
+#elif __AVX2__
+# define SIMD_AND_SI(a,b) _mm256_and_si256(a, b)
+#elif __SSE__
+# define SIMD_AND_SI(a,b) _mm_and_si128 (a, b)
+#endif
+
 /**
  * @brief For clean code of max/min (float32)
  * @param a output register
@@ -644,6 +657,23 @@ simd_helper_castsi_ps__(unsigned int a)
 # define SIMD_REDUCE_MAX_EPU32(a, b)                    \
     __SIMD_REDUCE_MAX_128_TO_32_EPU32(a, b);
 #endif
+
+/**
+ * @brief Populate the EPU_REF "name" with mask for the lower "batch_size"
+ * uint32 elements.
+ */
+#define SIMD_GENERATE_MASK(name, batch_size)     \
+    {                                            \
+    unsigned int __mask[SIMD_WIDTH];             \
+    for (int i = 0; i<batch_size; i++) {         \
+        __mask[i] = 0xFFFFFFFF;                  \
+    }                                            \
+    for (int i=batch_size; i<SIMD_WIDTH; i++) {  \
+        __mask[i] = 0;                           \
+    }                                            \
+    name = SIMD_LOADU_SI(__mask);                \
+    }
+
 
 /**
  * @brief For each "TARGET" unsigned integer within "VECTOR"
