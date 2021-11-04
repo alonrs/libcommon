@@ -155,7 +155,7 @@ typedef union {
 #elif __SSE__
 # define SIMD_SET1_PS(a) SIMD_COMMAND(_set1_ps(a))
 # define SIMD_SET1_EPI32(a) SIMD_COMMAND(_set1_epi32(a))
-# define SIMD_SET1_EPI64(a) SIMD_COMMAND(_set1_epi64(a))
+# define SIMD_SET1_EPI64(a) SIMD_COMMAND(_set1_epi64x(a))
 #endif
 
 /**
@@ -234,23 +234,54 @@ typedef union {
 
 /**
  * @brief For clean code of shift.
- * @param a vector register
+ * @param a output, vector register
  * @param b vector register
+ * @param c bit count
  */
 #ifdef NSIMD
-# define SIMD_SRL_EPU32(a,b) (a>>b)
-# define SIMD_SRL_EPU64(a,b) (a>>b)
-# define SIMD_SRA_EPI32(a,b) (a>>b)
-# define SIMD_SRA_EPI64(a,b) (a>>b)
-# define SIMD_SLL_EPU32(a,b) (a<<b)
-# define SIMD_SLL_EPU64(a,b) (a<<b)
-#else
-# define SIMD_SRL_EPU32(a,b) SIMD_COMMAND(_srl_epi32(a, b))
-# define SIMD_SRL_EPU64(a,b) SIMD_COMMAND(_srl_epi64(a, b))
-# define SIMD_SRL_EPI32(a,b) SIMD_COMMAND(_sra_epi32(a, b))
-# define SIMD_SRL_EPI64(a,b) SIMD_COMMAND(_sra_epi64(a, b))
-# define SIMD_SLL_EPI32(a,b) SIMD_COMMAND(_sll_epi32(a, b))
-# define SIMD_SLL_EPI64(a,b) SIMD_COMMAND(_sll_epi64(a, b))
+# define SIMD_SRL_EPU32(a,b,c) a=(b>>c)
+# define SIMD_SRL_EPU64(a,b,c) a=(b>>c)
+# define SIMD_SRA_EPI32(a,b,c) a=(b>>c)
+# define SIMD_SRA_EPI64(a,b,c) a=(b>>c)
+# define SIMD_SLL_EPU32(a,b,c) a=(b<<c)
+# define SIMD_SLL_EPU64(a,b,c) a=(b<<c)
+#elif __SSE__
+# define SIMD_SRL_EPU32(a,b,c)              \
+    {                                       \
+    __m128i count;                          \
+    count = _mm_set_epi64x(0, c);           \
+    a=SIMD_COMMAND(_srl_epi32(b, count));   \
+    }
+# define SIMD_SRL_EPU64(a,b,c)              \
+    {                                       \
+    __m128i count;                          \
+    count = _mm_set_epi64x(0, c);           \
+    a=SIMD_COMMAND(_srl_epi64(b, count));   \
+    }
+# define SIMD_SRL_EPI32(a,b,c)              \
+    {                                       \
+    __m128i count;                          \
+    count = _mm_set_epi64x(0, c);           \
+    a=SIMD_COMMAND(_sra_epi32(b, count));   \
+    }
+# define SIMD_SRL_EPI64(a,b,c)              \
+    {                                       \
+    __m128i count;                          \
+    count = _mm_set_epi64x(0, c);           \
+    a=SIMD_COMMAND(_sra_epi64(b, count));   \
+    }
+# define SIMD_SLL_EPI32(a,b,c)              \
+    {                                       \
+    __m128i count;                          \
+    count = _mm_set_epi64x(0, c);           \
+    a=SIMD_COMMAND(_sll_epi32(b, count));   \
+    }
+# define SIMD_SLL_EPI64(a,b,c)              \
+    {                                       \
+    __m128i count;                          \
+    count = _mm_set_epi64x(0, c);           \
+    a=SIMD_COMMAND(_sll_epi64(b, count));   \
+    }
 #endif
 
 
@@ -561,25 +592,60 @@ simd_helper_castsi_ps__(unsigned int a)
 #endif
 
 /**
- * @brief Compare greater than (a>b)
+ * @brief Compare greater than (b>c) of signed integers
+ * @param a Output
+ * @param b Signed integer
+ * @param c Signed integer
  */
 #ifdef NSIMD
-# define SIMD_CMPGT_EPI8(a,b) a>b
-# define SIMD_CMPGT_EPI16(a,b) a>b
-# define SIMD_CMPGT_EPI32(a,b) a>b
-# define SIMD_CMPGT_EPI64(a,b) a>b
+# define SIMD_CMPGT_EPI8(a,b,c) (a=(b>c))
+# define SIMD_CMPGT_EPI16(a,b,c) (a=(b>c))
+# define SIMD_CMPGT_EPI32(a,b,c) (a=(b>c))
+# define SIMD_CMPGT_EPI64(a,b,c) (a=(b>c))
 #elif __AVX2__
-# define SIMD_CMPGT_EPI8(a,b)  _mm256_cmpgt_epi8(a,b)
-# define SIMD_CMPGT_EPI16(a,b) _mm256_cmpgt_epi16(a,b)
-# define SIMD_CMPGT_EPI32(a,b) _mm256_cmpgt_epi32(a,b)
-# define SIMD_CMPGT_EPI64(a,b) _mm256_cmpgt_epi64(a,b)
+# define SIMD_CMPGT_EPI8(a,b,c)  a=_mm256_cmpgt_epi8(b,c)
+# define SIMD_CMPGT_EPI16(a,b,c) a=_mm256_cmpgt_epi16(b,c)
+# define SIMD_CMPGT_EPI32(a,b,c) a=_mm256_cmpgt_epi32(b,c)
+# define SIMD_CMPGT_EPI64(a,b,c) a=_mm256_cmpgt_epi64(b,c)
 #elif __SSE__
-# define SIMD_CMPGT_EPI8(a,b)  _mm_cmpgt_epi8(a,b)
-# define SIMD_CMPGT_EPI16(a,b) _mm_cmpgt_epi16(a,b)
-# define SIMD_CMPGT_EPI32(a,b) _mm_cmpgt_epi32(a,b)
-# define SIMD_CMPGT_EPI64(a,b) _mm_cmpgt_epi64(a,b)
+# define SIMD_CMPGT_EPI8(a,b,c) a= _mm_cmpgt_epi8(b,c)
+# define SIMD_CMPGT_EPI16(a,b,c) a=_mm_cmpgt_epi16(b,c)
+# define SIMD_CMPGT_EPI32(a,b,c) a=_mm_cmpgt_epi32(b,c)
+# define SIMD_CMPGT_EPI64(a,b,c) a=_mm_cmpgt_epi64(b,c)
 #endif
 
+/**
+ * @brief Compare greater than (a>=b) of unsigned integers
+ * @param a Output
+ * @param b Unsigned integer
+ * @param c Unsigned integer
+ */
+#ifdef NSIMD
+# define SIMD_CMPGE_EPU8(a,b,c) (a=(b>c))
+# define SIMD_CMPGE_EPU16(a,b,c) (a=(b>c))
+# define SIMD_CMPGE_EPU32(a,b,c) (a=(b>c))
+# define SIMD_CMPGE_EPU64(a,b,c) (a=(b>c))
+#elif __AVX2__
+# define __SIMD_CMPGT_HELPER(a,b,c,SIZE)        \
+    {                                           \
+    __m256i max = _mm256_max_epu ## SIZE(b,c);  \
+    a=_mm256_cmpeq_epi ## SIZE(b,max);          \
+    }
+# define SIMD_CMPGE_EPU8(a,b,c) __SIMD_CMPGT_HELPER(a,b,c,8)
+# define SIMD_CMPGE_EPU16(a,b,c) __SIMD_CMPGT_HELPER(a,b,c,16)
+# define SIMD_CMPGE_EPU32(a,b,c) __SIMD_CMPGT_HELPER(a,b,c,32)
+# define SIMD_CMPGE_EPU64(a,b,c) __SIMD_CMPGT_HELPER(a,b,c,64)
+#elif __SSE__
+# define __SIMD_CMPGT_HELPER(a,b,c,SIZE)        \
+    {                                           \
+    __m128i max = _mm_max_epu ## SIZE(b,c);     \
+    a=_mm_cmpeq_epi ## SIZE(b,max);             \
+    }
+# define SIMD_CMPGE_EPU8(a,b,c) __SIMD_CMPGT_HELPER(a,b,c,8)
+# define SIMD_CMPGE_EPU16(a,b,c) __SIMD_CMPGT_HELPER(a,b,c,16)
+# define SIMD_CMPGE_EPU32(a,b,c) __SIMD_CMPGT_HELPER(a,b,c,32)
+# define SIMD_CMPGE_EPU64(a,b,c) __SIMD_CMPGT_HELPER(a,b,c,64)
+#endif
 
 /**
  * @brief Set each bit of mask a based on the most significant bit
