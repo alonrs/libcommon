@@ -65,7 +65,8 @@ typedef union {
 } simd_vector_t CACHE_ALIGNED;
 
 /**
- * @brief Used for extracting information from 32bit elements
+ * @brief Sets "a" to the index of the most significant bit in "b".
+ * (in [0,32] for 32-bit, [0,64] for 64-bit).
  */
 typedef union {
     float f;
@@ -73,17 +74,29 @@ typedef union {
 } simd_element_t;
 
 #ifdef NSIMD
-inline int __bitscan_helper(int b) {
+inline int __bitscan_helper(unsigned int b) {
     int retval = 0;
-    if (!b) return retval;
     for(b; b>>=1)
         retval++;
     }
     return retval;
 }
-#define BITSCAN_REVERSE_UINT32(a) __bitscan_helper(a)
+inline int __bitscan_helper64(unsigned long b) {
+    int retval = 0;
+    for(b; b>>=1)
+        retval++;
+    }
+    return retval;
+}
+# define BITSCAN_REVERSE_UINT32(a,b) a=((!b)-1)&__bitscan_helper(b)
+# define BITSCAN_REVERSE_UINT64(a,b) a=((!b)-1)&__bitscan_helper64(b)
 #else
-#define BITSCAN_REVERSE_UINT32(a) _bit_scan_reverse(a)
+# define BITSCAN_REVERSE_UINT32(a,b) a=((!b)-1)&_bit_scan_reverse(b)
+# define BITSCAN_REVERSE_UINT64(a,b)                                  \
+    {                                                                 \
+        a = ((!b)-1)&(_bit_scan_reverse((unsigned int)(b&0xffffffff))+\
+                      _bit_scan_reverse((unsigned int)(b>>32))+2);    \
+    }
 #endif
 
 /**
