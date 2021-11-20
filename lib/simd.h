@@ -326,37 +326,37 @@ simd_helper_castsi_ps__(unsigned int a)
 # define SIMD_SRL_EPI32(a,b,c)              \
     {                                       \
     __m128i count;                          \
-    count = _mm_set_epi64x(0, c);           \
+    count = _mm_set_epi64x(c, 0);           \
     a=SIMD_COMMAND(_srl_epi32(b, count));   \
     }
 # define SIMD_SRL_EPI64(a,b,c)              \
     {                                       \
     __m128i count;                          \
-    count = _mm_set_epi64x(0, c);           \
+    count = _mm_set_epi64x(c, 0);           \
     a=SIMD_COMMAND(_srl_epi64(b, count));   \
     }
 # define SIMD_SRA_EPI32(a,b,c)              \
     {                                       \
     __m128i count;                          \
-    count = _mm_set_epi64x(0, c);           \
+    count = _mm_set_epi64x(c, 0);           \
     a=SIMD_COMMAND(_sra_epi32(b, count));   \
     }
 # define SIMD_SRA_EPI64(a,b,c)              \
     {                                       \
     __m128i count;                          \
-    count = _mm_set_epi64x(0, c);           \
+    count = _mm_set_epi64x(c, 0);           \
     a=SIMD_COMMAND(_sra_epi64(b, count));   \
     }
 # define SIMD_SLL_EPI32(a,b,c)              \
     {                                       \
     __m128i count;                          \
-    count = _mm_set_epi64x(0, c);           \
+    count = _mm_set_epi64x(c, 0);           \
     a=SIMD_COMMAND(_sll_epi32(b, count));   \
     }
 # define SIMD_SLL_EPI64(a,b,c)              \
     {                                       \
     __m128i count;                          \
-    count = _mm_set_epi64x(0, c);           \
+    count = _mm_set_epi64x(c, 0);           \
     a=SIMD_COMMAND(_sll_epi64(b, count));   \
     }
 #endif
