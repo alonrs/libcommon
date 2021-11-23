@@ -391,6 +391,17 @@ simd_helper_castsi_ps__(unsigned int a)
 #endif
 
 /**
+ * @brief For clean code of sqrt.
+ * @param a vector register
+ * @param b vector register
+ */
+#ifdef NSIMD
+# define SIMD_SQRT_PS(a,b) a=sqrt(b)
+#elif __SSE__
+# define SIMD_SQRT_PS(a,b) (a=SIMD_COMMAND(_sqrt_ps(b)))
+#endif
+
+/**
  * @brief For clean code of and/or/and-not (~a&b)
  * @param a vector register
  * @param b vector register
