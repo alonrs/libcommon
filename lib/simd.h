@@ -66,7 +66,7 @@ typedef union {
 
 /**
  * @brief Sets "a" to the index of the most significant bit in "b".
- * (in [0,32] for 32-bit, [0,64] for 64-bit).
+ * (in [0,31] for 32-bit, [0,63] for 64-bit).
  */
 typedef union {
     float f;
@@ -88,14 +88,15 @@ inline int __bitscan_helper64(unsigned long b) {
     }
     return retval;
 }
-# define BITSCAN_REVERSE_UINT32(a,b) a=((!b)-1)&__bitscan_helper(b)
-# define BITSCAN_REVERSE_UINT64(a,b) a=((!b)-1)&__bitscan_helper64(b)
+# define BITSCAN_REVERSE_UINT32(a,b) a=__bitscan_helper(b)
+# define BITSCAN_REVERSE_UINT64(a,b) a=__bitscan_helper64(b)
 #else
-# define BITSCAN_REVERSE_UINT32(a,b) a=((!b)-1)&_bit_scan_reverse(b)
+# define BITSCAN_REVERSE_UINT32(a,b) a=_bit_scan_reverse(b)
 # define BITSCAN_REVERSE_UINT64(a,b)                                  \
     {                                                                 \
-        a = ((!b)-1)&(_bit_scan_reverse((unsigned int)(b&0xffffffff))+\
-                      _bit_scan_reverse((unsigned int)(b>>32))+2);    \
+        int _lsb = _bit_scan_reverse((unsigned int)(b&0xffffffff));   \
+        int _msb = 32+_bit_scan_reverse((unsigned int)(b>>32));       \
+        a = (b>>32) ? _msb : _lsb;                                    \
     }
 #endif
 
