@@ -27,6 +27,192 @@ test_init(int argc, char **argv)
 }
 
 static void
+check_abort(int cond)
+{
+    if (cond) {
+        return;
+    }
+    printf("\nError!\n");
+    exit(EXIT_FAILURE);
+}
+
+static void
+test_bitscan_reverse()
+{
+    uint32_t epu32 = random_uint32();
+    uint64_t epu64 = random_uint64();
+    int bsr32, bsr64;
+    BITSCAN_REVERSE_UINT32(bsr32, epu32);
+    BITSCAN_REVERSE_UINT64(bsr64, epu64);
+    for (int i=0; i<32; i++) {
+        if (!epu32) {
+            check_abort(bsr32==i-1);
+            break;
+        }
+        epu32>>=1;
+    }
+    for (int i=0; i<64; i++) {
+        if (!epu64) {
+            check_abort(bsr64==i-1);
+            break;
+        }
+        epu64>>=1;
+    }
+}
+
+static void
+test_load_store_epu()
+{
+    uint32_t epu32[SIMD_WIDTH];
+    uint32_t target[SIMD_WIDTH] CACHE_ALIGNED;
+    EPU_REG r;
+    for (int i=0; i<SIMD_WIDTH; i++) {
+        epu32[i] = random_uint32();
+    }
+    r = SIMD_LOADU_SI(epu32);
+    SIMD_STORE_SI(target, r);
+    for (int i=0; i<SIMD_WIDTH; i++) {
+        check_abort(target[i]==epu32[i]);
+    }
+}
+
+static void
+test_load_store_ps()
+{
+    float ps32[SIMD_WIDTH];
+    float target[SIMD_WIDTH] CACHE_ALIGNED;
+    PS_REG r;
+    for (int i=0; i<SIMD_WIDTH; i++) {
+        ps32[i] = random_double();
+    }
+    r = SIMD_LOADU_PS(ps32);
+    SIMD_STORE_PS(target, r);
+    for (int i=0; i<SIMD_WIDTH; i++) {
+        check_abort(target[i]==ps32[i]);
+    }
+}
+
+static void
+test_set1()
+{
+    uint32_t epu32[SIMD_WIDTH] CACHE_ALIGNED;
+    float ps32[SIMD_WIDTH] CACHE_ALIGNED;
+    uint64_t epu64[SIMD_WIDTH64] CACHE_ALIGNED;
+    uint32_t rand_epu32;
+    float rand_ps32;
+    uint64_t rand_epu64;
+
+    rand_epu32 = random_uint32();
+    rand_epu64 = random_uint64();
+    rand_ps32 = random_double();
+
+    EPU_REG epu_reg;
+    PS_REG ps_reg;
+    EPU_REG64 epu64_reg;
+
+    epu_reg = SIMD_SET1_EPI32(rand_epu32);
+    ps_reg = SIMD_SET1_PS(rand_ps32);
+    epu64_reg = SIMD_SET1_EPI64(rand_epu64);
+
+    SIMD_STORE_SI(epu32, epu_reg);
+    SIMD_STORE_PS(ps32, ps_reg);
+    SIMD_STORE_SI(epu64, epu64_reg);
+
+    for (int i=0; i<SIMD_WIDTH; i++) {
+        check_abort(epu32[i] == rand_epu32);
+        check_abort(ps32[i] == rand_ps32);
+    }
+    for (int i=0; i<SIMD_WIDTH64; i++) {
+        check_abort(epu64[i] == rand_epu64);
+    }
+}
+
+static void
+test_set()
+{
+    /* 32bit */
+    uint32_t a[8];
+    for (int i=0; i<SIMD_WIDTH; i++) {
+        a[i] = random_uint32();
+    }
+    EPU_REG epu_reg = SIMD_SET_EPI32(a[7],a[6],a[5],a[4],
+                                     a[3],a[2],a[1],a[0]);
+    uint32_t epu32[SIMD_WIDTH] CACHE_ALIGNED;
+    SIMD_STORE_SI(epu32, epu_reg);
+    for (int i=0; i<SIMD_WIDTH; i++) {
+        check_abort(epu32[i] == a[i]);
+    }
+
+    /* 64 bit */
+    uint64_t a64[4];
+    for (int i=0; i<SIMD_WIDTH64; i++) {
+        a64[i] = random_uint64();
+    }
+    EPU_REG64 epu_reg64 = SIMD_SET_EPI64(a64[3],a64[2],a64[1],a64[0]);
+    uint64_t epu64[SIMD_WIDTH64] CACHE_ALIGNED;
+    SIMD_STORE_SI(epu64, epu_reg64);
+    for (int i=0; i<SIMD_WIDTH64; i++) {
+        check_abort(epu64[i] == a64[i]);
+    }
+}
+
+static void
+test_zeros_ffs()
+{
+    uint32_t epu32[SIMD_WIDTH] CACHE_ALIGNED;
+    float ps32[SIMD_WIDTH] CACHE_ALIGNED;
+    EPU_REG epu_reg;
+    PS_REG ps_reg;
+    /* Zeros */
+    epu_reg = SIMD_ZEROS_SI;
+    ps_reg = SIMD_ZEROS_PS;
+    SIMD_STORE_SI(epu32, epu_reg);
+    SIMD_STORE_PS(ps32, ps_reg);
+    for (int i=0; i<SIMD_WIDTH; ++i) {
+        check_abort(epu32[i] == 0);
+        check_abort(ps32[i] == 0);
+    }
+    /* FFs */
+    epu_reg = SIMD_FFS_SI;
+    ps_reg = SIMD_FFS_PS;
+    SIMD_STORE_SI(epu32, epu_reg);
+    SIMD_STORE_PS(ps32, ps_reg);
+    for (int i=0; i<SIMD_WIDTH; ++i) {
+        check_abort(epu32[i] == 0xFFFFFFFF);
+        check_abort(*(uint32_t*)&ps32[i] == 0xFFFFFFFF);
+    }
+}
+
+static void
+test_add_sub()
+{
+    uint32_t epu32[SIMD_WIDTH] CACHE_ALIGNED;
+    uint64_t epu64[SIMD_WIDTH64] CACHE_ALIGNED;
+    float ps32[SIMD_WIDTH] CACHE_ALIGNED;
+    EPU_REG epu_reg;
+    EPU_REG64 epu_reg64;
+    PS_REG ps_reg;
+
+    for (int i=0; i<SIMD_WIDTH; ++i) {
+        epu32[i] = random_uint32();
+        ps32[i] = random_double();
+    }
+    for (int i=0; i<SIMD_WIDTH64; ++i) {
+        epu64[i] = random_uint64();
+    }
+
+    epu_reg = SIMD_LOADU_SI(epu32);
+    ps32 = SIMD_LOADU_PS(ps32);
+    epu64 = SIMD_LOADU_SI(epu64);
+
+    epu_reg = SIMD_ADD_EPI32(epu_reg, epu_reg);
+    epu_reg64 = SIMD_ADD_EPI64(epu_reg64, epu_reg64);
+    ps32 = SIMD_ADD_PS(ps32, ps32);
+
+
+}
+
+static void
 test_reduce_max()
 {
     uint32_t epu32[SIMD_WIDTH];
@@ -143,6 +329,12 @@ main(int argc, char **argv)
     for (int count=0; count<CHECK_NUM; count++) {
         test_reduce_sum();
         test_reduce_max();
+        test_bitscan_reverse();
+        test_load_store_epu();
+        test_load_store_ps();
+        test_set1();
+        test_set();
+        test_zeros_ffs();
         if (!(count % (CHECK_NUM/10))) {
             printf(".");
             fflush(stdout);
