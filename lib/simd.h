@@ -442,6 +442,20 @@ simd_helper_andnot_ps__(float a, float b)
 # define SIMD_AND_PS(a,b)                                      \
     vreinterpretq_f32_s32(vandq_s32(vreinterpretq_s32_f32(a),  \
                                     vreinterpretq_s32_f32(b))) 
+#elif __AVX__ && !__AVX2__
+# define SIMD_AND_PS(a,b) _mm256_and_ps(a,b)
+# define SIMD_AND_SI(a,b) _mm256_castps_si256(                       \
+                                _mm256_and_ps(_mm256_castsi256_ps(a),\
+                                              _mm256_castsi256_ps(b)))
+# define SIMD_OR_PS(a,b) _mm256_or_ps(a,b)
+# define SIMD_OR_SI(a,b) _mm256_castps_si256(                        \
+                                _mm256_or_ps(_mm256_castsi256_ps(a), \
+                                             _mm256_castsi256_ps(b)))
+# define SIMD_ANDNOT_PS(a,b) _mm256_andnot_ps(a,b)
+# define SIMD_ANDNOT_SI(a,b) _mm256_castps_si256(                       \
+                                _mm256_andnot_ps(_mm256_castsi256_ps(a),\
+                                              _mm256_castsi256_ps(b)))
+
 #elif __SSE__
 # define SIMD_AND_PS(a,b) SIMD_COMMAND(_and_ps(a, b))
 # define SIMD_AND_SI(a,b) SIMD_COMMAND_SUFFIX(_and_si)(a, b)
@@ -505,6 +519,38 @@ static inline __m256i _mm256_min_epi64xx(__m256i a, __m256i b)
     return _mm256_blendv_epi8(b,a,mask);
 }
 #define _mm256_cmpeq_epi64xx(a,b) _mm256_cmpeq_epi64(a,b)
+#elif __AVX__
+static inline __m128i _mm_max_epu64xx(__m128i a, __m128i b)
+{
+    __m128i signbit = _mm_set1_epi64x(0x8000000000000000);
+    __m128i mask = _mm_cmpgt_epi64(
+            _mm_xor_si128(a,signbit),
+            _mm_xor_si128(b,signbit));
+    return _mm_blendv_epi8(b,a,mask);
+}
+static inline __m128i _mm_min_epu64xx(__m128i a, __m128i b)
+{
+    __m128i signbit = _mm_set1_epi64x(0x8000000000000000);
+    __m128i ffs = _mm_cmpeq_epi32(_mm_setzero_si128(),_mm_setzero_si128());
+    __m128i mask = _mm_cmpgt_epi64(
+            _mm_xor_si128(a,signbit),
+            _mm_xor_si128(b,signbit));
+    mask = _mm_andnot_si128(mask, ffs);
+    return _mm_blendv_epi8(b,a,mask);
+}
+static inline __m128i _mm_max_epi64xx(__m128i a, __m128i b)
+{
+    __m128i mask = _mm_cmpgt_epi64(a,b);
+    return _mm_blendv_epi8(b,a,mask);
+}
+static inline __m128i _mm_min_epi64xx(__m128i a, __m128i b)
+{
+    __m128i mask = _mm_cmpgt_epi64(a,b);
+    __m128i ffs = _mm_cmpeq_epi32(_mm_setzero_si128(),_mm_setzero_si128());
+    mask = _mm_andnot_si128(mask, ffs);
+    return _mm_blendv_epi8(b,a,mask);
+}
+#define _mm_cmpeq_epi64xx(a,b) _mm_cmpeq_epi64(a,b)
 #elif __SSE__
 static inline __m128i _mm_max_epu64xx(__m128i a, __m128i b)
 {
@@ -538,14 +584,15 @@ static inline __m128i _mm_min_epi64xx(__m128i a, __m128i b)
 #endif
 
 #if __AVX__ &&!__AVX2__
-# define __SIMD_SPLIT_SI(name)                                                \
-    __m128i name ## _lo = _mm256_extractf128_si256(name, 1);                  \
+# define __SIMD_SPLIT_SI(name)                                            \
+    __m128i name ## _lo = _mm256_extractf128_si256(name, 1);              \
     __m128i name ## _hi = _mm256_castsi256_si128(name);
-# define __SIMD_MERGE_SI(name, out)
-    __m128  name ## _lo_ps = _mm_castsi128_ps(name ## _lo);               \
-    __m128  name ## _hi_ps = _mm_castsi128_ps(name ## _hi);               \
-    __m256  name ## _wd_ps = _mm256_castps128_ps256(name ## _hi_ps);      \
-    out = _mm256_insertf128_ps( name ## _wd_ps,name ## _lo_ps,1);
+# define __SIMD_MERGE_SI(name, out)                                           \
+    __m128 name ## _lo_ps = _mm_castsi128_ps(name ## _lo);                    \
+    __m128 name ## _hi_ps = _mm_castsi128_ps(name ## _hi);                    \
+    __m256 name ## _wd_ps = _mm256_castps128_ps256(name ## _hi_ps);           \
+    __m256 out ## _ps = _mm256_insertf128_ps(name ## _wd_ps,name ## _lo_ps,1);\
+    out = _mm256_castps_si256(out ## _ps);
 #endif
 
 /**
@@ -577,64 +624,64 @@ static inline __m128i _mm_min_epi64xx(__m128i a, __m128i b)
     {                                                                        \
     __SIMD_SPLIT_SI(b);                                                      \
     __SIMD_SPLIT_SI(c);                                                      \
-    b_low = _mm_max_epu32(b_low, c_low);                                     \
-    b_high = _mm_max_epu32(b_high, c_high);                                  \
+    b ## _lo = _mm_max_epu32(b ## _lo, c ## _lo);                            \
+    b ## _hi = _mm_max_epu32(b ## _hi, c ## _hi);                            \
     __SIMD_MERGE_SI(b, a)                                                    \
     }
 # define SIMD_MIN_EPU32(a,b,c)                                               \
     {                                                                        \
     __SIMD_SPLIT_SI(b);                                                      \
     __SIMD_SPLIT_SI(c);                                                      \
-    b_low = _mm_min_epu32(b_low, c_low);                                     \
-    b_high = _mm_min_epu32(b_high, c_high);                                  \
+    b ## _lo = _mm_min_epu32(b ## _lo, c ## _lo);                            \
+    b ## _hi = _mm_min_epu32(b ## _hi, c ## _hi);                            \
     __SIMD_MERGE_SI(b, a)                                                    \
     }
 # define SIMD_MAX_EPI32(a,b,c)                                               \
     {                                                                        \
     __SIMD_SPLIT_SI(b);                                                      \
     __SIMD_SPLIT_SI(c);                                                      \
-    b_low = _mm_max_epi32(b_low, c_low);                                     \
-    b_high = _mm_max_epi32(b_high, c_high);                                  \
+    b ## _lo = _mm_max_epi32(b ## _lo, c ## _lo);                            \
+    b ## _hi = _mm_max_epi32(b ## _hi, c ## _hi);                            \
     __SIMD_MERGE_SI(b, a)                                                    \
     }
 # define SIMD_MIN_EPI32(a,b,c)                                               \
     {                                                                        \
     __SIMD_SPLIT_SI(b);                                                      \
     __SIMD_SPLIT_SI(c);                                                      \
-    b_low = _mm_min_epi32(b_low, c_low);                                     \
-    b_high = _mm_min_epi32(b_high, c_high);                                  \
+    b ## _lo = _mm_min_epi32(b ## _lo, c ## _lo);                            \
+    b ## _hi = _mm_min_epi32(b ## _hi, c ## _hi);                            \
     __SIMD_MERGE_SI(b, a)                                                    \
     }
 # define SIMD_MAX_EPU64(a,b,c)                                               \
     {                                                                        \
     __SIMD_SPLIT_SI(b);                                                      \
     __SIMD_SPLIT_SI(c);                                                      \
-    b_low = _mm_max_epu64xx(b_low, c_low);                                   \
-    b_high = _mm_max_epu64xx(b_high, c_high);                                \
+    b ## _lo = _mm_max_epu64xx(b ## _lo, c ## _lo);                          \
+    b ## _hi = _mm_max_epu64xx(b ## _hi, c ## _hi);                          \
     __SIMD_MERGE_SI(b, a)                                                    \
     }
 # define SIMD_MIN_EPU64(a,b,c)                                               \
     {                                                                        \
     __SIMD_SPLIT_SI(b);                                                      \
     __SIMD_SPLIT_SI(c);                                                      \
-    b_low = _mm_min_epu64xx(b_low, c_low);                                   \
-    b_high = _mm_min_epu64xx(b_high, c_high);                                \
+    b ## _lo = _mm_min_epu64xx(b ## _lo, c ## _lo);                          \
+    b ## _hi = _mm_min_epu64xx(b ## _hi, c ## _hi);                          \
     __SIMD_MERGE_SI(b, a)                                                    \
     }
 # define SIMD_MAX_EPI64(a,b,c)                                               \
     {                                                                        \
     __SIMD_SPLIT_SI(b);                                                      \
     __SIMD_SPLIT_SI(c);                                                      \
-    b_low = _mm_max_epi64xx(b_low, c_low);                                   \
-    b_high = _mm_max_epi64xx(b_high, c_high);                                \
+    b ## _lo = _mm_max_epi64xx(b ## _lo, c ## _lo);                          \
+    b ## _hi = _mm_max_epi64xx(b ## _hi, c ## _hi);                          \
     __SIMD_MERGE_SI(b, a)                                                    \
     }
 # define SIMD_MIN_EPI64(a,b,c)                                               \
     {                                                                        \
     __SIMD_SPLIT_SI(b);                                                      \
     __SIMD_SPLIT_SI(c);                                                      \
-    b_low = _mm_min_epi64xx(b_low, c_low);                                   \
-    b_high = _mm_min_epi64xx(b_high, c_high);                                \
+    b ## _lo = _mm_min_epi64xx(b ## _lo, c ## _lo);                          \
+    b ## _hi = _mm_min_epi64xx(b ## _hi, c ## _hi);                          \
     __SIMD_MERGE_SI(b, a)                                                    \
     }
 #elif __SSE__
@@ -690,18 +737,18 @@ static inline __m128i _mm_min_epi64xx(__m128i a, __m128i b)
     {                                                                        \
     __SIMD_SPLIT_SI(b);                                                      \
     __SIMD_SPLIT_SI(c);                                                      \
-    b_low = _mm_cmpeq_epi32(b_low, c_low);                                   \
-    b_high = high_res = _mm_cmpeq_epi32(b_high, c_high);                     \
+    b ## _lo = _mm_cmpeq_epi32(b ## _lo, c ## _lo);                          \
+    b ## _hi = _mm_cmpeq_epi32(b ## _hi, c ##_hi);                           \
     __SIMD_MERGE_SI(b, a)                                                    \
     }
 # define SIMD_CMPEQ_EPI64(a,b,c)                                             \
     {                                                                        \
     __SIMD_SPLIT_SI(b);                                                      \
     __SIMD_SPLIT_SI(c);                                                      \
-    b_low = _mm_cmpeq_epi64(b_low, c_low);                                   \
-    b_high = high_res = _mm_cmpeq_epi64(b_high, c_high);                     \
+    b ## _lo = _mm_cmpeq_epi64(b ## _lo, c ## _lo);                          \
+    b ## _hi = _mm_cmpeq_epi64(b ## _hi, c ##_hi);                           \
     __SIMD_MERGE_SI(b, a)                                                    \
-    }
+    }                  
 #elif __SSE__
 # define SIMD_CMPEQ_EPI32(a,b,c) a=_mm_cmpeq_epi32(b,c)
 # define SIMD_CMPEQ_EPI64(a,b,c) a=_mm_cmpeq_epi64(b,c)
