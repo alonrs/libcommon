@@ -196,6 +196,11 @@ typedef uint8_t CACHE_LINE_MARKER[1];
 /* Align to cache line */
 #define CACHE_ALIGNED __attribute__ ((aligned (64)))
 
+/* Bitmap fast access */
+#define ULLONG_SET0(MAP, OFFSET) ((MAP) &= ~(1ULL << (OFFSET)))
+#define ULLONG_SET1(MAP, OFFSET) ((MAP) |= 1ULL << (OFFSET))
+#define ULLONG_GET(MAP, OFFSET) !!((MAP) & (1ULL << (OFFSET)))
+
 /* One cache line that acts as message accross cores. Access using NAME.val */
 #define MESSAGE_T(TYPE, NAME) volatile static union CACHE_ALIGNED \
     { char _x[CACHE_LINE_SIZE]; TYPE val; } NAME
