@@ -61,6 +61,75 @@ test_bitscan_reverse()
 }
 
 static void
+test_bitscan_forward()
+{
+    uint32_t epu32 = random_uint32();
+    uint64_t epu64 = random_uint64();
+    int bsf32, bsf64;
+    BITSCAN_FORWARD_UINT32(bsf32, epu32);
+    BITSCAN_FORWARD_UINT64(bsf64, epu64);
+    for (int i=0; i<32; i++) {
+        if (epu32&1) {
+            check_abort(bsf32==i);
+            break;
+        }
+        epu32>>=1;
+    }
+    for (int i=0; i<64; i++) {
+        if (epu64&1) {
+            check_abort(bsf64==i);
+            break;
+        }
+        epu64>>=1;
+    }
+}
+
+static void
+test_move_mask_ps()
+{
+    uint32_t epu32[SIMD_WIDTH];
+    EPU_REG r;
+    PS_REG p;
+    int result;
+    for (int i=0; i<SIMD_WIDTH; i++) {
+        epu32[i] = (random_uint32() & 0xF) < 7 ? 0 : 0xFFFFFFFF;
+    }
+    r = SIMD_LOADU_SI(epu32);
+    p = SIMD_CASTSI_PS(r);
+    SIMD_MOVE_MASK_PS(result,p);
+    for (int i=0; i<SIMD_WIDTH; ++i) {
+        if (epu32[i]) {
+            check_abort((result & 1) == 1);
+        } else {
+            check_abort((result & 1) == 0);
+        }
+        result >>= 1;
+    }
+}
+
+static void
+test_move_mask_epi8()
+{
+    const int size = SIMD_WIDTH*sizeof(uint32_t);
+    uint8_t epu8[size];
+    EPU_REG r;
+    int result;
+    for (int i=0; i<size; i++) {
+        epu8[i] = (random_uint32() & 0xF) < 7 ? 0 : 0xFF;
+    }
+    r = SIMD_LOADU_SI(epu8);
+    SIMD_MOVE_MASK_EPI8(result,r);
+    for (int i=0; i<size; ++i) {
+        if (epu8[i]) {
+            check_abort((result & 1) == 1);
+        } else {
+            check_abort((result & 1) == 0);
+        }
+        result >>= 1;
+    }
+}
+
+static void
 test_load_store_epu()
 {
     uint32_t epu32[SIMD_WIDTH];
@@ -135,12 +204,12 @@ test_set()
     for (int i=0; i<SIMD_WIDTH; i++) {
         a[i] = random_uint32();
     }
-    EPU_REG epu_reg = SIMD_SET_EPI32(a[7],a[6],a[5],a[4],
-                                     a[3],a[2],a[1],a[0]);
+    EPU_REG epu_reg = SIMD_SET_EPI32(a[0],a[1],a[2],a[3],
+                                     a[4],a[5],a[6],a[7]);
     uint32_t epu32[SIMD_WIDTH] CACHE_ALIGNED;
     SIMD_STORE_SI(epu32, epu_reg);
     for (int i=0; i<SIMD_WIDTH; i++) {
-        check_abort(epu32[i] == a[i]);
+        check_abort(epu32[i] == a[SIMD_WIDTH-i-1]);
     }
 
     /* 64 bit */
@@ -148,11 +217,11 @@ test_set()
     for (int i=0; i<SIMD_WIDTH64; i++) {
         a64[i] = random_uint64();
     }
-    EPU_REG64 epu_reg64 = SIMD_SET_EPI64(a64[3],a64[2],a64[1],a64[0]);
+    EPU_REG64 epu_reg64 = SIMD_SET_EPI64(a64[0],a64[1],a64[2],a64[3]);
     uint64_t epu64[SIMD_WIDTH64] CACHE_ALIGNED;
     SIMD_STORE_SI(epu64, epu_reg64);
     for (int i=0; i<SIMD_WIDTH64; i++) {
-        check_abort(epu64[i] == a64[i]);
+        check_abort(epu64[i] == a64[SIMD_WIDTH64-i-1]);
     }
 }
 
@@ -184,11 +253,14 @@ test_zeros_ffs()
 }
 
 static void
-test_add_sub()
+test_add()
 {
     uint32_t epu32[SIMD_WIDTH] CACHE_ALIGNED;
     uint64_t epu64[SIMD_WIDTH64] CACHE_ALIGNED;
     float ps32[SIMD_WIDTH] CACHE_ALIGNED;
+    uint32_t epu32_1[SIMD_WIDTH] CACHE_ALIGNED;
+    uint64_t epu64_1[SIMD_WIDTH64] CACHE_ALIGNED;
+    float ps32_1[SIMD_WIDTH] CACHE_ALIGNED;
     EPU_REG epu_reg;
     EPU_REG64 epu_reg64;
     PS_REG ps_reg;
@@ -202,14 +274,23 @@ test_add_sub()
     }
 
     epu_reg = SIMD_LOADU_SI(epu32);
-    ps32 = SIMD_LOADU_PS(ps32);
-    epu64 = SIMD_LOADU_SI(epu64);
+    ps_reg = SIMD_LOADU_PS(ps32);
+    epu_reg64 = SIMD_LOADU_SI(epu64);
 
     epu_reg = SIMD_ADD_EPI32(epu_reg, epu_reg);
     epu_reg64 = SIMD_ADD_EPI64(epu_reg64, epu_reg64);
-    ps32 = SIMD_ADD_PS(ps32, ps32);
+    ps_reg = SIMD_ADD_PS(ps_reg, ps_reg);
 
-
+    SIMD_STORE_SI(epu32_1, epu_reg);
+    SIMD_STORE_PS(ps32_1, ps_reg);
+    SIMD_STORE_SI(epu64_1, epu_reg64);
+    for (int i=0; i<SIMD_WIDTH; ++i) {
+        check_abort(epu32_1[i] == 2* epu32[i]);
+        check_abort(ps32_1[i] == 2* ps32[i]);
+    }
+    for (int i=0; i<SIMD_WIDTH64; ++i) {
+        check_abort(epu64_1[i] == 2*epu64[i]);
+    }
 }
 
 static void
@@ -330,11 +411,15 @@ main(int argc, char **argv)
         test_reduce_sum();
         test_reduce_max();
         test_bitscan_reverse();
+        test_bitscan_forward();
         test_load_store_epu();
         test_load_store_ps();
         test_set1();
         test_set();
         test_zeros_ffs();
+        test_move_mask_ps();
+        test_move_mask_epi8();
+        test_add();
         if (!(count % (CHECK_NUM/10))) {
             printf(".");
             fflush(stdout);

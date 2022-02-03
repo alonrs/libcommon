@@ -73,32 +73,64 @@ typedef union {
     unsigned int d;
 } simd_element_t;
 
-#ifdef NSIMD
-inline int __bitscan_helper(unsigned int b) {
-    int retval = 0;
-    for(b; b>>=1)
-        retval++;
-    }
-    return retval;
-}
-inline int __bitscan_helper64(unsigned long b) {
-    int retval = 0;
-    for(b; b>>=1)
-        retval++;
-    }
-    return retval;
-}
-# define BITSCAN_REVERSE_UINT32(a,b) a=__bitscan_helper(b)
-# define BITSCAN_REVERSE_UINT64(a,b) a=__bitscan_helper64(b)
-#else
-# define BITSCAN_REVERSE_UINT32(a,b) a=_bit_scan_reverse(b)
-# define BITSCAN_REVERSE_UINT64(a,b)                                  \
-    {                                                                 \
-        int _lsb = _bit_scan_reverse((unsigned int)(b&0xffffffff));   \
-        int _msb = 32+_bit_scan_reverse((unsigned int)(b>>32));       \
-        a = (b>>32) ? _msb : _lsb;                                    \
-    }
+/* Helper macros for missing AVX intrinsics... */
+#if __AVX__ &&!__AVX2__
+# define __SIMD_SPLIT_SI(name)                                            \
+    __m128i name ## _lo = _mm256_extractf128_si256(name, 1);              \
+    __m128i name ## _hi = _mm256_castsi256_si128(name);
+# define __SIMD_MERGE_SI(name, out)                                           \
+    __m128 name ## _lo_ps = _mm_castsi128_ps(name ## _lo);                    \
+    __m128 name ## _hi_ps = _mm_castsi128_ps(name ## _hi);                    \
+    __m256 name ## _wd_ps = _mm256_castps128_ps256(name ## _hi_ps);           \
+    __m256 out ## _ps = _mm256_insertf128_ps(name ## _wd_ps,name ## _lo_ps,1);\
+    out = _mm256_castps_si256(out ## _ps);
 #endif
+
+/* Bit scab forware, bit scan reverse */
+#ifdef NSIMD
+inline int __bsr_helper(unsigned int b) {
+    int retval = 0;
+    for(b; b>>=1)
+        retval++;
+    }
+    return retval;
+}
+inline int __bsr_helper64(unsigned long b) {
+    int retval = 0;
+    for(b; b>>=1)
+        retval++;
+    }
+    return retval;
+}
+inline int __bsf_helper(unsigned int b) {
+    int retval = 0;
+    for(!(b&1); b>>=1)
+        retval++;
+    }
+    return retval;
+}
+inline int __bsf_helper64(unsigned long b) {
+    int retval = 0;
+    for(!(b&1); b>>=1)
+        retval++;
+    }
+    return retval;
+}
+# define BITSCAN_REVERSE_UINT32(a,b) a=__bsr_helper(b)
+# define BITSCAN_REVERSE_UINT64(a,b) a=__bsr_helper(b)
+# define BITSCAN_FORWARD_UINT32(a,b) a=__bsf_helper(b)
+# define BITSCAN_FORWARD_UINT64(a,b) a=__bsf_helper(b)
+#else
+# define BITSCAN_REVERSE_UINT32(a,b) a=__bsrd(b)
+# define BITSCAN_FORWARD_UINT32(a,b) a=__bsfd(b)
+# define BITSCAN_REVERSE_UINT64(a,b) a=__bsrq(b)
+# define BITSCAN_FORWARD_UINT64(a,b) a=__bsfq(b)
+#endif
+
+#define BSR32(a,b) BITSCAN_REVERSE_UINT32(a,b)
+#define BSR64(a,b) BITSCAN_REVERSE_UINT64(a,b)
+#define BSF32(a,b) BITSCAN_FORWARD_UINT32(a,b)
+#define BSF64(a,b) BITSCAN_FORWARD_UINT64(a,b)
 
 /**
  * @brief For clean code of fused multiple add. Computes a=a*b+c
@@ -175,6 +207,7 @@ inline int __bitscan_helper64(unsigned long b) {
  */
 #ifdef NSIMD
 # define SIMD_SET1_PS(a) (float)a
+# define SIMD_SET1_EPI16(a) (short)a
 # define SIMD_SET1_EPI32(a) (int)a
 # define SIMD_SET1_EPI64(a) (long)a
 #elif __ARM_NEON
@@ -182,6 +215,7 @@ inline int __bitscan_helper64(unsigned long b) {
 # define SIMD_SET1_EPI32(a) vdupq_n_u32(a)
 #elif __SSE__
 # define SIMD_SET1_PS(a) SIMD_COMMAND(_set1_ps(a))
+# define SIMD_SET1_EPI16(a) SIMD_COMMAND(_set1_epi16(a))
 # define SIMD_SET1_EPI32(a) SIMD_COMMAND(_set1_epi32(a))
 # define SIMD_SET1_EPI64(a) SIMD_COMMAND(_set1_epi64x(a))
 #endif
@@ -203,10 +237,8 @@ inline int __bitscan_helper64(unsigned long b) {
       _mm256_set_epi64x(a,b,c,d)
 #elif __SSE__
 # define SIMD_SET_EPI32(a,b,c,d,...) _mm_set_epi32(a,b,c,d)
-# define SIMD_SET_PS(a,b,c,d,...) \
-        _mm_set_ps(a,b,c,d,e,f,g,h)
-# define SIMD_SET_EPI64(a,b,...) \
-        _mm_set_epi64(a,b)
+# define SIMD_SET_PS(a,b,c,d,...)    _mm_set_ps(a,b,c,d)
+# define SIMD_SET_EPI64(a,b,...)     _mm_set_epi64((__m64)a,(__m64)b)
 #endif
 
 /**
@@ -265,6 +297,11 @@ simd_helper_castsi_ps__(unsigned int a)
 # define SIMD_FFS_SI -1
 #elif __ARM_NEON
 # define SIMD_ZEROS_PS vdupq_n_f32(0)
+#elif __AVX__ & !__AVX2__
+# define SIMD_ZEROS_PS SIMD_COMMAND(_setzero_ps())
+# define SIMD_ZEROS_SI SIMD_COMMAND_SUFFIX(_setzero_si)()
+# define SIMD_FFS_SI _mm256_set1_epi32(-1)
+# define SIMD_FFS_PS SIMD_CASTSI_PS(SIMD_FFS_SI)
 #elif __SSE__
 # define SIMD_ZEROS_PS SIMD_COMMAND(_setzero_ps())
 # define SIMD_ZEROS_SI SIMD_COMMAND_SUFFIX(_setzero_si)()
@@ -302,6 +339,35 @@ simd_helper_castsi_ps__(unsigned int a)
 # define SIMD_ADD_EPI64(a,b) (a+b)
 #elif __ARM_NEON
 # define SIMD_ADD_PS(a,b) vaddq_f32(a,b)
+#elif __AVX__ &!__AVX2__
+
+static inline __m256i
+__simd_add_epi64(__m256i a, __m256i b)
+{
+    __m256i out;
+    __SIMD_SPLIT_SI(a);
+    __SIMD_SPLIT_SI(b);
+    b_lo = _mm_add_epi64(a_lo, b_lo);
+    b_hi = _mm_add_epi64(a_hi, b_hi);
+    __SIMD_MERGE_SI(b, out);
+    return out;
+}
+
+static inline __m256i
+__simd_add_epi32(__m256i a, __m256i b)
+{
+    __m256i out;
+    __SIMD_SPLIT_SI(a);
+    __SIMD_SPLIT_SI(b);
+    b_lo = _mm_add_epi32(a_lo, b_lo);
+    b_hi = _mm_add_epi32(a_hi, b_hi);
+    __SIMD_MERGE_SI(b, out);
+    return out;
+}
+
+# define SIMD_ADD_PS(a,b) SIMD_COMMAND(_add_ps(a, b))
+# define SIMD_ADD_EPI32(a,b) __simd_add_epi32(a,b)
+# define SIMD_ADD_EPI64(a,b) __simd_add_epi64(a,b)
 #elif __SSE__
 # define SIMD_ADD_PS(a,b) SIMD_COMMAND(_add_ps(a, b))
 # define SIMD_ADD_EPI32(a,b) SIMD_COMMAND(_add_epi32(a, b))
@@ -583,18 +649,6 @@ static inline __m128i _mm_min_epi64xx(__m128i a, __m128i b)
 #define _mm_cmpeq_epi64xx(a,b) _mm_cmpeq_epi64(a,b)
 #endif
 
-#if __AVX__ &&!__AVX2__
-# define __SIMD_SPLIT_SI(name)                                            \
-    __m128i name ## _lo = _mm256_extractf128_si256(name, 1);              \
-    __m128i name ## _hi = _mm256_castsi256_si128(name);
-# define __SIMD_MERGE_SI(name, out)                                           \
-    __m128 name ## _lo_ps = _mm_castsi128_ps(name ## _lo);                    \
-    __m128 name ## _hi_ps = _mm_castsi128_ps(name ## _hi);                    \
-    __m256 name ## _wd_ps = _mm256_castps128_ps256(name ## _hi_ps);           \
-    __m256 out ## _ps = _mm256_insertf128_ps(name ## _wd_ps,name ## _lo_ps,1);\
-    out = _mm256_castps_si256(out ## _ps);
-#endif
-
 /**
  * @brief For clean code of max/min (uint32)
  * @param a output register
@@ -727,12 +781,22 @@ static inline __m128i _mm_min_epi64xx(__m128i a, __m128i b)
  * @param c integer vector register
  */
 #ifdef NSIMD
+# define SIMD_CMPEQ_EPI16(a,b,c) a=(b==c) ? 0xffff : 0x0
 # define SIMD_CMPEQ_EPI32(a,b,c) a=(b==c) ? 0xffffffff : 0x0
 # define SIMD_CMPEQ_EPI64(a,b,c) a=(b==c) ? 0xffffffffffffffff : 0x0
 #elif __AVX2__
+# define SIMD_CMPEQ_EPI16(a,b,c) a=_mm256_cmpeq_epi16(b,c)
 # define SIMD_CMPEQ_EPI32(a,b,c) a=_mm256_cmpeq_epi32(b,c)
 # define SIMD_CMPEQ_EPI64(a,b,c) a=_mm256_cmpeq_epi64(b,c)
 #elif __AVX__
+# define SIMD_CMPEQ_EPI16(a,b,c)                                             \
+    {                                                                        \
+    __SIMD_SPLIT_SI(b);                                                      \
+    __SIMD_SPLIT_SI(c);                                                      \
+    b ## _lo = _mm_cmpeq_epi16(b ## _lo, c ## _lo);                          \
+    b ## _hi = _mm_cmpeq_epi16(b ## _hi, c ##_hi);                           \
+    __SIMD_MERGE_SI(b, a)                                                    \
+    }
 # define SIMD_CMPEQ_EPI32(a,b,c)                                             \
     {                                                                        \
     __SIMD_SPLIT_SI(b);                                                      \
@@ -750,6 +814,7 @@ static inline __m128i _mm_min_epi64xx(__m128i a, __m128i b)
     __SIMD_MERGE_SI(b, a)                                                    \
     }                  
 #elif __SSE__
+# define SIMD_CMPEQ_EPI16(a,b,c) a=_mm_cmpeq_epi16(b,c)
 # define SIMD_CMPEQ_EPI32(a,b,c) a=_mm_cmpeq_epi32(b,c)
 # define SIMD_CMPEQ_EPI64(a,b,c) a=_mm_cmpeq_epi64(b,c)
 #elif __ARM_NEON
@@ -865,11 +930,19 @@ static inline __m128i _mm_min_epi64xx(__m128i a, __m128i b)
  * floating-point element in b
  */
 #ifdef NSIMD
+# define SIMD_MOVE_MASK_EPI8(a,b) a=(b!=0)
 # define SIMD_MOVE_MASK_PS(a,b) a=(b!=0)
-#elif __AVX__
+#elif __AVX__ &! __AVX2__
 # define SIMD_MOVE_MASK_PS(a,b) a=_mm256_movemask_ps(b)
+# define SIMD_MOVE_MASK_EPI8(a,b)                                            \
+    {                                                                        \
+    __SIMD_SPLIT_SI(b);                                                      \
+    a = (_mm_movemask_epi8(b ## _lo) << 16) |                                \
+         _mm_movemask_epi8(b ## _hi);                                        \
+    }
 #elif __SSE__
-# define SIMD_MOVE_MASK_PS(a,b) a=_mm_movemask_ps(b)
+# define SIMD_MOVE_MASK_PS(a,b)   a=SIMD_COMMAND(_movemask_ps(b))
+# define SIMD_MOVE_MASK_EPI8(a,b) a=SIMD_COMMAND(_movemask_epi8(b))
 #elif __ARM_NEON
 #define SIMD_MOVE_MASK_PS(a, b)                                       \
     {                                                                 \
