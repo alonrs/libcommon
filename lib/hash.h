@@ -196,7 +196,7 @@ static inline uint32_t hash_finish(uint64_t hash, uint64_t final)
 static inline uint32_t
 hash_words_inline(const uint32_t p_[], size_t n_words, uint32_t basis)
 {
-    const uint64_t *p = (const void *)p_;
+    const uint64_t *p = (const uint64_t *)p_;
     uint64_t hash1 = basis;
     uint64_t hash2 = 0;
     uint64_t hash3 = n_words;
