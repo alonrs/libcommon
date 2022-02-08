@@ -168,9 +168,9 @@ inline int __bsf_helper64(unsigned long b) {
 # define SIMD_LOADU_PD(a) *a
 # define SIMD_LOADU_SI(a) *a
 #elif __ARM_NEON
-# define SIMD_LOAD_PS(a) vld1q_f32((const float32_t*)a)
-# define SIMD_LOADU_PS(a) vld1q_f32((const float32_t*)a)
-# define SIMD_LOADU_SI(a) vld1q_u32((const uint32_t*)a)
+# define SIMD_LOAD_PS(a) vld1q_f32((const float32_t*)(a))
+# define SIMD_LOADU_PS(a) vld1q_f32((const float32_t*)(a))
+# define SIMD_LOADU_SI(a) vld1q_u32((const uint32_t*)(a))
 #else
 # define SIMD_LOAD_PS(a) SIMD_COMMAND(_load_ps(a))
 # define SIMD_LOADU_PS(a) SIMD_COMMAND(_loadu_ps(a))
@@ -179,9 +179,9 @@ inline int __bsf_helper64(unsigned long b) {
 # ifdef __AVX512F__
 # define SIMD_LOADU_SI(a) _mm512_loadu_si512(a)
 # elif __AVX__
-# define SIMD_LOADU_SI(a) _mm256_lddqu_si256((const __m256i*)a)
+# define SIMD_LOADU_SI(a) _mm256_lddqu_si256((const __m256i*)(a))
 # elif __SSE__
-# define SIMD_LOADU_SI(a) _mm_lddqu_si128((const __m128i*)a)
+# define SIMD_LOADU_SI(a) _mm_lddqu_si128((const __m128i*)(a))
 # endif
 #endif
 
@@ -195,10 +195,10 @@ inline int __bsf_helper64(unsigned long b) {
 # define SIMD_STORE_PS(a,b) *a = b
 # define SIMD_STORE_SI(a,b) *a = b
 #elif __ARM_NEON
-# define SIMD_STORE_PS(a,b) vst1q_f32((float32_t*)a,b)
+# define SIMD_STORE_PS(a,b) vst1q_f32((float32_t*)(a),b)
 #elif __SSE__
 # define SIMD_STORE_PS(a,b) SIMD_COMMAND(_store_ps(a,b))
-# define SIMD_STORE_SI(a,b) SIMD_COMMAND_SUFFIX(_store_si)((EPU_REG*)a,b)
+# define SIMD_STORE_SI(a,b) SIMD_COMMAND_SUFFIX(_store_si)((EPU_REG*)(a),b)
 #endif
 
 /**
@@ -238,7 +238,7 @@ inline int __bsf_helper64(unsigned long b) {
 #elif __SSE__
 # define SIMD_SET_EPI32(a,b,c,d,...) _mm_set_epi32(a,b,c,d)
 # define SIMD_SET_PS(a,b,c,d,...)    _mm_set_ps(a,b,c,d)
-# define SIMD_SET_EPI64(a,b,...)     _mm_set_epi64((__m64)a,(__m64)b)
+# define SIMD_SET_EPI64(a,b,...)     _mm_set_epi64((__m64)(a),(__m64)(b))
 #endif
 
 /**
