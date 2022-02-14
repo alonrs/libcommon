@@ -87,46 +87,10 @@ typedef union {
 #endif
 
 /* Bit scab forware, bit scan reverse */
-#ifdef NSIMD
-inline int __bsr_helper(unsigned int b) {
-    int retval = 0;
-    for(b; b>>=1)
-        retval++;
-    }
-    return retval;
-}
-inline int __bsr_helper64(unsigned long b) {
-    int retval = 0;
-    for(b; b>>=1)
-        retval++;
-    }
-    return retval;
-}
-inline int __bsf_helper(unsigned int b) {
-    int retval = 0;
-    for(!(b&1); b>>=1)
-        retval++;
-    }
-    return retval;
-}
-inline int __bsf_helper64(unsigned long b) {
-    int retval = 0;
-    for(!(b&1); b>>=1)
-        retval++;
-    }
-    return retval;
-}
-# define BITSCAN_REVERSE_UINT32(a,b) a=__bsr_helper(b)
-# define BITSCAN_REVERSE_UINT64(a,b) a=__bsr_helper(b)
-# define BITSCAN_FORWARD_UINT32(a,b) a=__bsf_helper(b)
-# define BITSCAN_FORWARD_UINT64(a,b) a=__bsf_helper(b)
-#else
 # define BITSCAN_REVERSE_UINT32(a,b) a=__bsrd(b)
 # define BITSCAN_FORWARD_UINT32(a,b) a=__bsfd(b)
 # define BITSCAN_REVERSE_UINT64(a,b) a=__bsrq(b)
 # define BITSCAN_FORWARD_UINT64(a,b) a=__bsfq(b)
-#endif
-
 #define BSR32(a,b) BITSCAN_REVERSE_UINT32(a,b)
 #define BSR64(a,b) BITSCAN_REVERSE_UINT64(a,b)
 #define BSF32(a,b) BITSCAN_FORWARD_UINT32(a,b)
@@ -163,19 +127,22 @@ inline int __bsf_helper64(unsigned long b) {
  * (64bit/32bit/16bit, depends on vector width)
  */
 #ifdef NSIMD
-# define SIMD_LOAD_PS(a) *a
-# define SIMD_LOADU_PS(a) *a
-# define SIMD_LOADU_PD(a) *a
-# define SIMD_LOADU_SI(a) *a
+# define SIMD_LOAD_PS(a) (*(float*)a)
+# define SIMD_LOADU_PS(a) (*(float*)a)
+# define SIMD_LOADU_PD(a) (*(double*)a)
+# define SIMD_LOADU_SI(a) (*(unsigned*)a)
+# define SIMD_LOADU_SI64(a) (*(long*)a)
 #elif __ARM_NEON
 # define SIMD_LOAD_PS(a) vld1q_f32((const float32_t*)(a))
 # define SIMD_LOADU_PS(a) vld1q_f32((const float32_t*)(a))
 # define SIMD_LOADU_SI(a) vld1q_u32((const uint32_t*)(a))
+# define SIMD_LOADU_SI64(a) SIMD_LOADU_SI(a)
 #else
 # define SIMD_LOAD_PS(a) SIMD_COMMAND(_load_ps(a))
 # define SIMD_LOADU_PS(a) SIMD_COMMAND(_loadu_ps(a))
 # define SIMD_LOADU_PD(a) SIMD_COMMAND(_loadu_pd(a))
 # define SIMD_LOADU_PS(a) SIMD_COMMAND(_loadu_ps(a))
+# define SIMD_LOADU_SI64(a) SIMD_LOADU_SI(a)
 # ifdef __AVX512F__
 # define SIMD_LOADU_SI(a) _mm512_loadu_si512(a)
 # elif __AVX__
@@ -183,6 +150,7 @@ inline int __bsf_helper64(unsigned long b) {
 # elif __SSE__
 # define SIMD_LOADU_SI(a) _mm_lddqu_si128((const __m128i*)(a))
 # endif
+# define SIMD_LOADU_SI64(a) SIMD_LOADU_SI(a)
 #endif
 
 /**
@@ -192,8 +160,8 @@ inline int __bsf_helper64(unsigned long b) {
  * @param b vector register
  */
 #ifdef NSIMD
-# define SIMD_STORE_PS(a,b) *a = b
-# define SIMD_STORE_SI(a,b) *a = b
+# define SIMD_STORE_PS(a,b) *(__typeof__(b)*)a = b
+# define SIMD_STORE_SI(a,b) *(__typeof__(b)*)a = b
 #elif __ARM_NEON
 # define SIMD_STORE_PS(a,b) vst1q_f32((float32_t*)(a),b)
 #elif __SSE__
@@ -246,7 +214,7 @@ inline int __bsf_helper64(unsigned long b) {
  * @param a vector register
  */
 #ifdef NSIMD
-inline unsigned int
+static inline unsigned int
 simd_helper_castps_si__(float a)
 {
     simd_element_t x;
@@ -269,7 +237,7 @@ simd_helper_castps_si__(float a)
  * @param a vector register
  */
 #ifdef NSIMD
-inline float
+static inline float
 simd_helper_castsi_ps__(unsigned int a)
 {
     simd_element_t x;
@@ -291,9 +259,16 @@ simd_helper_castsi_ps__(unsigned int a)
  * @brief For clean code of 0x00..00 / 0xFF..FF vector.
  */
 #ifdef NSIMD
+static inline float
+__simd_helper_ff_ps()
+{
+    simd_element_t x;
+    x.d=-1;
+    return x.f;
+}
 # define SIMD_ZEROS_PS 0
 # define SIMD_ZEROS_SI 0
-# define SIMD_FFS_PS -1
+# define SIMD_FFS_PS __simd_helper_ff_ps();
 # define SIMD_FFS_SI -1
 #elif __ARM_NEON
 # define SIMD_ZEROS_PS vdupq_n_f32(0)
@@ -617,7 +592,7 @@ static inline __m128i _mm_min_epi64xx(__m128i a, __m128i b)
     return _mm_blendv_epi8(b,a,mask);
 }
 #define _mm_cmpeq_epi64xx(a,b) _mm_cmpeq_epi64(a,b)
-#elif __SSE__
+#elif __SSE__ && !NSIMD
 static inline __m128i _mm_max_epu64xx(__m128i a, __m128i b)
 {
     __m128i signbit = _mm_set1_epi64x(0x8000000000000000);
@@ -930,8 +905,23 @@ static inline __m128i _mm_min_epi64xx(__m128i a, __m128i b)
  * floating-point element in b
  */
 #ifdef NSIMD
-# define SIMD_MOVE_MASK_EPI8(a,b) a=(b!=0)
-# define SIMD_MOVE_MASK_PS(a,b) a=(b!=0)
+static inline int
+__simd_helper_move_mask_ps(float input)
+{
+    simd_element_t x;
+    x.f = input;
+    return !!(x.d & 0x80000000);
+}
+static inline unsigned
+__simd_helper_move_mask_epi8(unsigned input)
+{
+    return (input & 0x80)       >> 7  |
+           (input & 0x8000)     >> 14 |
+           (input & 0x800000)   >> 21 |
+           (input & 0x80000000) >> 28;
+}
+# define SIMD_MOVE_MASK_EPI8(a,b) a=__simd_helper_move_mask_epi8(b)
+# define SIMD_MOVE_MASK_PS(a,b) a=__simd_helper_move_mask_ps(b)
 #elif __AVX__ &! __AVX2__
 # define SIMD_MOVE_MASK_PS(a,b) a=_mm256_movemask_ps(b)
 # define SIMD_MOVE_MASK_EPI8(a,b)                                            \
@@ -1282,6 +1272,60 @@ static inline __m128i _mm_min_epi64xx(__m128i a, __m128i b)
 #elif __ARM_NEON
 # define SIMD_REDUCE_MAX_EPU32(a, b)                \
     __SIMD_REDUCE_MAX_128_TO_32_EPU32_ARM(a,b)
+#endif
+
+/**
+ * @brief Concatenate SIMD_WIDTH blocks in a and b into a 2*SIMD_WIDTH
+ * temporary result, shift the result right by imm8 bytes, and store the low
+ * SIMD_WIDTH in dst (per 128bit lane).
+ */
+#ifdef NSIMD
+static inline unsigned
+__simd_helper_alignr(void *pa, void *pb, int imm8)
+{
+    unsigned a = *(unsigned*)pa;
+    unsigned b = *(unsigned*)pb;
+    return !imm8 ? b : ((b >> (imm8*8)) | (a << ((sizeof(a)-imm8)*8)));
+}
+# define SIMD_ALIGNR_EPI8(dst, a, b, imm8) \
+    dst = __simd_helper_alignr(&a, &b, imm8);
+#elif __AVX2__
+# define SIMD_ALIGNR_EPI8(dst, a, b, imm8) \
+    dst = _mm256_alignr_epi8(a, b, imm8)
+#elif __AVX__ && !__AVX2__
+# define SIMD_ALIGNR_EPI8(dst, a, b, imm8)                   \
+    {                                                        \
+        __SIMD_SPLIT_SI(a);                                  \
+        __SIMD_SPLIT_SI(b);                                  \
+        a ## _lo = _mm_alignr_epi8(a ## _lo, b ## _lo, imm8);\
+        a ## _hi = _mm_alignr_epi8(a ## _hi, b ## _hi, imm8);\
+        __SIMD_MERGE_SI(a, dst);                             \
+    }
+#elif __SSE__
+# define SIMD_ALIGNR_EPI8(dst, a, b, imm8) \
+    dst = _mm_alignr_epi8(a, b, imm8)
+#endif
+
+/**
+ * @brief Shuffle 32-bit integers in a within 128-bit lanes using the control
+ * in imm8, and store the results in dst.
+ * @param imm8 2bits selector per 32bit in "dst". Each 2bit selects 32bits from
+ * "a" (0- 31:0; 1- 63:32; 2- 95:64; 3- 127:96).
+ */
+#ifdef NSIMD
+# define SIMD_SHUFFLE_EPI32(dst, a, imm8) dst = a
+#elif __AVX__ && !__AVX2__
+# define SIMD_SHUFFLE_EPI32(dst, a, imm8)                    \
+    {                                                        \
+        __SIMD_SPLIT_SI(a);                                  \
+        a ## _lo = _mm_shuffle_epi32(a ## _lo, imm8);        \
+        a ## _hi = _mm_shuffle_epi32(a ## _hi, imm8);        \
+        __SIMD_MERGE_SI(a, dst);                             \
+    }
+#elif __AVX2__
+# define SIMD_SHUFFLE_EPI32(dst, a, imm8) dst = _mm256_shuffle_epi32(a, imm8)
+#elif __SSE__
+# define SIMD_SHUFFLE_EPI32(dst, a, imm8) dst = _mm_shuffle_epi32(a, imm8)
 #endif
 
 /**
