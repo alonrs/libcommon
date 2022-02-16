@@ -1306,6 +1306,56 @@ __simd_helper_alignr(void *pa, void *pb, int imm8)
     dst = _mm_alignr_epi8(a, b, imm8)
 #endif
 
+
+/**
+ * @brief Blend elements from a and b using control mask imm8, and store
+ * the results in dst. each 1 bit in "imm8" sets "dest" element to "b",
+ * 0 bit sets to "a".
+ */
+#ifdef NSIMD
+# define SIMD_BLEND_EPI32(dst, a, b, imm8) (dst = (imm8) ? (b) : (a))
+# define SIMD_BLEND_EPI64(dst, a, b, imm8) SIMD_BLEND_EPI32(dst, a, b, imm8)
+#elif __AVX2__
+# define SIMD_BLEND_EPI32(dst, a, b, imm8) dst = _mm256_blend_epi32(a,b,imm8)
+# define SIMD_BLEND_EPI64(dst, a, b, imm8)                           \
+    {                                                                \
+        __m256d dst_pd = _mm256_blend_pd(_mm256_castsi256_pd (a),    \
+                                         _mm256_castsi256_pd (b),    \
+                                         imm8);                      \
+        dst = _mm256_castpd_si256(dst_pd);                           \
+    }
+#elif __AVX__
+# define SIMD_BLEND_EPI32(dst, a, b, imm8)                           \
+    {                                                                \
+        __m256  dst_ps = _mm256_blend_ps(_mm256_castsi256_ps (a),    \
+                                         _mm256_castsi256_ps (b),    \
+                                         imm8);                      \
+        dst = _mm256_castps_si256(dst_ps);                           \
+    }
+# define SIMD_BLEND_EPI64(dst, a, b, imm8)                           \
+    {                                                                \
+        __m256d dst_pd = _mm256_blend_pd(_mm256_castsi256_pd (a),    \
+                                         _mm256_castsi256_pd (b),    \
+                                         imm8);                      \
+        dst = _mm256_castpd_si256(dst_pd);                           \
+    }
+#elif __SSE__
+# define SIMD_BLEND_EPI32(dst, a, b, imm8)                     \
+    {                                                          \
+        __m128  dst_ps = _mm_blend_ps(_mm_castsi128_ps (a),    \
+                                      _mm_castsi128_ps (b),    \
+                                      imm8);                   \
+        dst = _mm_castps_si128(dst_ps);                        \
+    }
+# define SIMD_BLEND_EPI64(dst, a, b, imm8)                    \
+    {                                                         \
+        __m128d dst_pd = _mm_blend_pd(_mm_castsi128_pd (a),   \
+                                      _mm_castsi128_pd (b),   \
+                                      imm8);                  \
+        dst = _mm_castpd_si128(dst_pd);                       \
+    }
+#endif
+
 /**
  * @brief Shuffle 32-bit integers in a within 128-bit lanes using the control
  * in imm8, and store the results in dst.
