@@ -295,6 +295,35 @@ __simd_helper_ff_ps()
 # define SIMD_SUB_EPI64(a,b) a-b
 #elif __ARM_NEON
 # define SIMD_SUB_PS(a,b) vsubq_f32(a,b)
+#elif __AVX__ && !__AVX2__
+
+static inline __m256i
+__simd_sub_epi64(__m256i a, __m256i b)
+{
+    __m256i out;
+    __SIMD_SPLIT_SI(a);
+    __SIMD_SPLIT_SI(b);
+    b_lo = _mm_sub_epi64(a_lo, b_lo);
+    b_hi = _mm_sub_epi64(a_hi, b_hi);
+    __SIMD_MERGE_SI(b, out);
+    return out;
+}
+
+static inline __m256i
+__simd_sub_epi32(__m256i a, __m256i b)
+{
+    __m256i out;
+    __SIMD_SPLIT_SI(a);
+    __SIMD_SPLIT_SI(b);
+    b_lo = _mm_sub_epi32(a_lo, b_lo);
+    b_hi = _mm_sub_epi32(a_hi, b_hi);
+    __SIMD_MERGE_SI(b, out);
+    return out;
+}
+
+# define SIMD_SUB_PS(a,b) SIMD_COMMAND(_add_ps(a, b))
+# define SIMD_SUB_EPI32(a,b) __simd_sub_epi32(a,b)
+# define SIMD_SUB_EPI64(a,b) __simd_sub_epi64(a,b)
 #elif __SSE__
 # define SIMD_SUB_PS(a,b) SIMD_COMMAND(_sub_ps(a, b))
 # define SIMD_SUB_EPI32(a,b) SIMD_COMMAND(_sub_epi32(a, b))
@@ -364,6 +393,67 @@ __simd_add_epi32(__m256i a, __m256i b)
 # define SIMD_SRA_EPI64(a,b,c) a=(b>>c)
 # define SIMD_SLL_EPI32(a,b,c) a=(b<<c)
 # define SIMD_SLL_EPI64(a,b,c) a=(b<<c)
+#elif __AVX__ && !__AVX2__
+# define SIMD_SRL_EPI32(a,b,c)              \
+    {                                       \
+    __m128i count;                          \
+    __m128i tmp_lo, tmp_hi;                 \
+    count = _mm_set_epi64x(0, c);           \
+    __SIMD_SPLIT_SI(b);                     \
+    tmp_lo = _mm_srl_epi32(b ## _lo, count);\
+    tmp_hi = _mm_srl_epi32(b ## _hi, count);\
+    __SIMD_MERGE_SI(tmp, a);                \
+    }
+# define SIMD_SRL_EPI64(a,b,c)              \
+    {                                       \
+    __m128i count;                          \
+    __m128i tmp_lo, tmp_hi;                 \
+    count = _mm_set_epi64x(0, c);           \
+    __SIMD_SPLIT_SI(b);                     \
+    tmp_lo = _mm_srl_epi64(b ## _lo, count);\
+    tmp_hi = _mm_srl_epi64(b ## _hi, count);\
+    __SIMD_MERGE_SI(tmp, a);                \
+    }
+# define SIMD_SRA_EPI32(a,b,c)              \
+    {                                       \
+    __m128i count;                          \
+    __m128i tmp_lo, tmp_hi;                 \
+    count = _mm_set_epi64x(0, c);           \
+    __SIMD_SPLIT_SI(b);                     \
+    tmp_lo = _mm_sra_epi32(b ## _lo, count);\
+    tmp_hi = _mm_sra_epi32(b ## _hi, count);\
+    __SIMD_MERGE_SI(tmp, a);                \
+    }
+# define SIMD_SRA_EPI64(a,b,c)              \
+    {                                       \
+    __m128i count;                          \
+    __m128i tmp_lo, tmp_hi;                 \
+    count = _mm_set_epi64x(0, c);           \
+    __SIMD_SPLIT_SI(b);                     \
+    tmp_lo = _mm_sra_epi64(b ## _lo, count);\
+    tmp_hi = _mm_sra_epi64(b ## _hi, count);\
+    __SIMD_MERGE_SI(tmp, a);                \
+    }
+# define SIMD_SLL_EPI32(a,b,c)              \
+    {                                       \
+    __m128i count;                          \
+    __m128i tmp_lo, tmp_hi;                 \
+    count = _mm_set_epi64x(0, c);           \
+    __SIMD_SPLIT_SI(b);                     \
+    tmp_lo = _mm_sll_epi32(b ## _lo, count);\
+    tmp_hi = _mm_sll_epi32(b ## _hi, count);\
+    __SIMD_MERGE_SI(tmp, a);                \
+    }
+# define SIMD_SLL_EPI64(a,b,c)              \
+    {                                       \
+    __m128i count;                          \
+    __m128i tmp_lo, tmp_hi;                 \
+    count = _mm_set_epi64x(0, c);           \
+    __SIMD_SPLIT_SI(b);                     \
+    tmp_lo = _mm_sll_epi64(b ## _lo, count);\
+    tmp_hi = _mm_sll_epi64(b ## _hi, count);\
+    __SIMD_MERGE_SI(tmp, a);                \
+    }
 #elif __SSE__
 # define SIMD_SRL_EPI32(a,b,c)              \
     {                                       \
@@ -859,6 +949,45 @@ static inline __m128i _mm_min_epi64xx(__m128i a, __m128i b)
     __SIMD_CMPGE_HELPER(a,b,c,SIZE);                  \
     a=_mm256_andnot_si256(a, _mm256_cmpeq_epi32(a,a));\
     }
+#elif __AVX__
+# define __SIMD_CMPGE_HELPER(a,b,c,SIZE)                     \
+    {                                                        \
+    __SIMD_SPLIT_SI(b);                                      \
+    __SIMD_SPLIT_SI(c);                                      \
+    __m128i max_lo = _mm_max_epu ## SIZE(b ## _lo,c ## _lo); \
+    __m128i max_hi = _mm_max_epu ## SIZE(b ## _hi,c ## _hi); \
+    max_lo = _mm_cmpeq_epi ## SIZE(b ## _lo, max_lo);        \
+    max_hi = _mm_cmpeq_epi ## SIZE(b ## _hi, max_hi);        \
+    __SIMD_MERGE_SI(max, a);                                 \
+    }
+# define __SIMD_CMPLE_HELPER(a,b,c,SIZE)                     \
+    {                                                        \
+    __SIMD_SPLIT_SI(b);                                      \
+    __SIMD_SPLIT_SI(c);                                      \
+    __m128i max_lo = _mm_min_epu ## SIZE(b ## _lo,c ## _lo); \
+    __m128i max_hi = _mm_min_epu ## SIZE(b ## _hi,c ## _hi); \
+    max_lo = _mm_cmpeq_epi ## SIZE(b ## _lo, max_lo);        \
+    max_hi = _mm_cmpeq_epi ## SIZE(b ## _hi, max_hi);        \
+    __SIMD_MERGE_SI(max, a);                                 \
+    }
+# define __SIMD_CMPGT_HELPER(a,b,c,SIZE)                                      \
+    {                                                                         \
+    __m256i t;                                                                \
+    __SIMD_CMPLE_HELPER(t,b,c,SIZE);                                          \
+    __SIMD_SPLIT_SI(t);                                                       \
+    t ## _lo =_mm_andnot_si128(t ## _lo, _mm_cmpeq_epi32(t ## _lo ,t ## _lo));\
+    t ## _hi =_mm_andnot_si128(t ## _hi, _mm_cmpeq_epi32(t ## _hi ,t ## _hi));\
+    __SIMD_MERGE_SI(t,a);                                                     \
+    }
+# define __SIMD_CMPLT_HELPER(a,b,c,SIZE)                                      \
+    {                                                                         \
+    __m256i t;                                                                \
+    __SIMD_CMPGE_HELPER(t,b,c,SIZE);                                          \
+    __SIMD_SPLIT_SI(t);                                                       \
+    t ## _lo =_mm_andnot_si128(t ## _lo, _mm_cmpeq_epi32(t ## _lo ,t ## _lo));\
+    t ## _hi =_mm_andnot_si128(t ## _hi, _mm_cmpeq_epi32(t ## _hi ,t ## _hi));\
+    __SIMD_MERGE_SI(t,a);                                                     \
+    }
 #elif __SSE__
 # define __SIMD_CMPGE_HELPER(a,b,c,SIZE)              \
     {                                                 \
@@ -1289,9 +1418,13 @@ __simd_helper_alignr(void *pa, void *pb, int imm8)
 }
 # define SIMD_ALIGNR_EPI8(dst, a, b, imm8) \
     dst = __simd_helper_alignr(&a, &b, imm8);
+# define SIMD_ALIGNR_EPI8_SELF(dst, a, imm8) \
+        SIMD_ALIGNR_EPI8(dst, a, a, imm8)
 #elif __AVX2__
 # define SIMD_ALIGNR_EPI8(dst, a, b, imm8) \
     dst = _mm256_alignr_epi8(a, b, imm8)
+# define SIMD_ALIGNR_EPI8_SELF(dst, a, imm8) \
+        SIMD_ALIGNR_EPI8(dst, a, a, imm8)
 #elif __AVX__ && !__AVX2__
 # define SIMD_ALIGNR_EPI8(dst, a, b, imm8)                   \
     {                                                        \
@@ -1301,11 +1434,31 @@ __simd_helper_alignr(void *pa, void *pb, int imm8)
         a ## _hi = _mm_alignr_epi8(a ## _hi, b ## _hi, imm8);\
         __SIMD_MERGE_SI(a, dst);                             \
     }
+# define SIMD_ALIGNR_EPI8_SELF(dst, a, imm8)                 \
+    {                                                        \
+        __SIMD_SPLIT_SI(a);                                  \
+        a ## _lo = _mm_alignr_epi8(a ## _lo, a ## _lo, imm8);\
+        a ## _hi = _mm_alignr_epi8(a ## _hi, a ## _hi, imm8);\
+        __SIMD_MERGE_SI(a, dst);                             \
+    }
 #elif __SSE__
 # define SIMD_ALIGNR_EPI8(dst, a, b, imm8) \
     dst = _mm_alignr_epi8(a, b, imm8)
+# define SIMD_ALIGNR_EPI8_SELF(dst, a, imm8) \
+        SIMD_ALIGNR_EPI8(dst, a, a, imm8)
 #endif
 
+/**
+ * @brief Permute the 128bit lanes of "a". Store result in "dst".
+ */
+#ifdef NSIMD
+# define SIMD_PERMUTATE_SELF_2f128(dst, a) dst = a
+#elif __AVX__
+# define SIMD_PERMUTATE_SELF_2f128(dst, a) \
+        dst = _mm256_permute2f128_si256(a, a, 1)
+#elif __SSE__
+# define SIMD_PERMUTATE_SELF_2f128(dst, a) dst = a
+#endif
 
 /**
  * @brief Blend elements from a and b using control mask imm8, and store
