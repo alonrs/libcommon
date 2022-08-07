@@ -67,6 +67,8 @@ extern "C" {
 #define BITMASK_16 0xffff
 #define BITMASK_32 0xffffffff
 
+#define PACKED __attribute__((packed))
+
 /* This system's cache line size, in bytes.
  * Being wrong hurts performance but not correctness. */
 #define CACHE_LINE_SIZE 64
