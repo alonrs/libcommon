@@ -26,8 +26,9 @@ static inline void spinlock_init(struct spinlock *spin);
 static inline void spinlock_destroy(struct spinlock *spin);
 
 /* Locks "spin" and returns status code */
-#define spinlock_lock(spin) spinlock_lock_at(spin, SOURCE_LOCATOR);
-#define spinlock_wait(spin) spinlock_wait_at(spin, SOURCE_LOCATOR);
+#define spinlock_lock(spin) spinlock_lock_at(spin, SOURCE_LOCATOR)
+#define spinlock_try_lock(spin) spinlock_try_lock_at(spin, SOURCE_LOCATOR)
+#define spinlock_wait(spin) spinlock_wait_at(spin, SOURCE_LOCATOR)
 
 static inline void spinlock_wait_at(struct spinlock *spin, const char *where);
 static inline void spinlock_lock_at(struct spinlock *spin, const char *where);
@@ -117,6 +118,27 @@ spinlock_lock_at(struct spinlock *spin, const char *where)
     }
 #endif
     spin->where = where;
+}
+
+/* Returns 1 iff the lock succeeded */
+static inline int
+spinlock_try_lock_at(struct spinlock *spin, const char *where)
+{
+    int result;
+    if (!spin) {
+        return 0;
+    }
+    uint32_t zero = 0;
+#ifndef __cplusplus
+    result = atomic_compare_exchange_strong(&spin->value, &zero, 1);
+#else
+    result =
+       spin->value.compare_exchange_strong(zero, 1, std::memory_order_seq_cst);
+#endif
+    if (result) {
+        spin->where = where;
+    }
+    return result;
 }
 
 static inline void
