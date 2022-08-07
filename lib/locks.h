@@ -228,7 +228,11 @@ cond_init(struct cond *cond) {
         abort_msg("pthread_cond_init fail");
     }
     mutex_init(&cond->mutex);
+#ifndef __cplusplus
     atomic_init(&cond->value, 0);
+#else
+    cond->value.store(0, std::memory_order_release);
+#endif
 }
 
 static inline void
