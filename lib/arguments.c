@@ -6,7 +6,7 @@
 
 #include "arguments.h"
 
-#define MAX_LINE_WIDTH 80
+#define MAX_LINE_WIDTH 100
 #define MSG_SEPERATOR "\n------\n"
 
 /* Returns argument "NAME" from "ARGS" with default value "DEF" */
@@ -49,7 +49,8 @@ print_next_word(const char *str, int *cursor, int indent)
     *cursor += i;
 
     printf("%s ", buffer);
-    if (*cursor >= MAX_LINE_WIDTH) {
+
+    if ((str[n] != '\0') && (*cursor >= MAX_LINE_WIDTH)) {
         was_newline = 1;
         printf("\n");
         for (int i=0; i<indent; ++i) {
@@ -59,7 +60,7 @@ print_next_word(const char *str, int *cursor, int indent)
     }
 
     /* Skip whitespace */
-    while (isspace(str[n])) {
+    while ((str[n] != '\0') && isspace(str[n])) {
         /* Print newline with indentation in case of a new line */
         if (!was_newline && (str[n] == '\n')) {
             printf("\n");
@@ -226,6 +227,11 @@ arg_parse(int argc, char **argv, struct arguments *required_args)
     /* Print help */
     current_arg = required_args;
     while (current_arg->name != NULL) {
+        if (!strcmp("\n", current_arg->name)) {
+            printf("\n");
+            ++current_arg;
+            continue;
+        }
         /* Build argument name */
         memset(buffer, 0, 1024);
         strcat(buffer, "--");
